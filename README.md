@@ -10,11 +10,6 @@ A macOS RSS reader built for engineering blogs. Three-pane layout, permanent art
 
 Unzip, drag `Antenna.app` to `/Applications`, open.
 
-> **"Damaged" error on first launch:** macOS quarantines apps downloaded from the internet. Run this in Terminal, then open normally:
-> ```bash
-> xattr -cr /Applications/Antenna.app
-> ```
-
 > **Note:** This build is arm64 only (Apple Silicon). Intel Mac support is not available yet.
 
 ## Features
@@ -66,6 +61,8 @@ npm run make -- --arch arm64       # build distributable ZIP
 The built ZIP lands in `out/make/zip/darwin/arm64/`.
 
 > `npm install` triggers `electron-rebuild` to compile `better-sqlite3` for the correct Electron ABI. Make sure you're running arm64 Node (`node -e "console.log(process.arch)"` should print `arm64`).
+
+> **Code signing:** distribution builds require a Developer ID Application certificate and a notarytool Keychain profile. See `forge.config.ts` for the signing configuration.
 
 ## Tech Stack
 
