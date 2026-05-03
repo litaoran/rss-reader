@@ -4,8 +4,6 @@
 
 A macOS RSS reader built for engineering blogs. Three-pane layout, permanent article archive, full-text search, and a curated starter set so you don't begin from scratch.
 
-![Antenna screenshot](docs/screenshot.png)
-
 ## Download
 
 **macOS (Apple Silicon / M-series):** [Antenna-darwin-arm64-1.0.0.zip](https://github.com/litaoran/rss-reader/releases/latest)
