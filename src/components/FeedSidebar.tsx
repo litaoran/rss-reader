@@ -74,14 +74,14 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
       {/* Smart rows */}
       <div style={{ ...styles.section, marginTop: 6 }}>
         <SmartRow
-          icon="●"
+          icon={<InboxIcon />}
           label="All Items"
           count={totalUnread}
           isSelected={selectedFeed === 'all'}
           onClick={() => onSelectFeed('all')}
         />
         <SmartRow
-          icon="★"
+          icon={<StarIcon />}
           label="Starred"
           count={0}
           isSelected={selectedFeed === 'starred'}
@@ -89,7 +89,7 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
           hideCount
         />
         <SmartRow
-          icon="◷"
+          icon={<TodayIcon />}
           label="Today"
           count={0}
           isSelected={selectedFeed === 'today'}
@@ -149,8 +149,40 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
   );
 }
 
+// ─── SVG Icons ────────────────────────────────────────────────────────────────
+
+function InboxIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1.5" y="1.5" width="13" height="13" rx="2" />
+      <path d="M1.5 10h3.5l1.5 2.5h3L11 10h3.5" />
+    </svg>
+  );
+}
+
+function StarIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 1.5l1.8 3.6 4 .6-2.9 2.8.7 4L8 10.6l-3.6 1.9.7-4L2.2 5.7l4-.6z" />
+    </svg>
+  );
+}
+
+function TodayIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1.5" y="2.5" width="13" height="12" rx="2" />
+      <line x1="5" y1="1" x2="5" y2="4" />
+      <line x1="11" y1="1" x2="11" y2="4" />
+      <line x1="1.5" y1="6.5" x2="14.5" y2="6.5" />
+    </svg>
+  );
+}
+
+// ─── Row Components ───────────────────────────────────────────────────────────
+
 function SmartRow({ icon, label, count, isSelected, onClick, hideCount }: {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   count: number;
   isSelected: boolean;
@@ -159,9 +191,13 @@ function SmartRow({ icon, label, count, isSelected, onClick, hideCount }: {
 }) {
   return (
     <button style={{ ...styles.row, ...(isSelected ? styles.rowSelected : {}) }} onClick={onClick}>
-      <span style={styles.smartIcon}>{icon}</span>
+      <span style={{ ...styles.iconSlot, color: isSelected ? 'var(--selection-badge)' : 'var(--accent)' }}>
+        {icon}
+      </span>
       <span style={styles.rowLabel}>{label}</span>
-      {!hideCount && count > 0 && <span style={styles.badge}>{count}</span>}
+      {!hideCount && count > 0 && (
+        <span style={{ ...styles.badge, ...(isSelected ? styles.badgeSelected : {}) }}>{count}</span>
+      )}
     </button>
   );
 }
@@ -179,7 +215,9 @@ function FeedRow({ feed, isSelected, onClick, onContextMenu }: {
       onContextMenu={onContextMenu}
       title={feed.url}
     >
-      {feed.isStale && <span style={styles.staleIndicator} title="Feed hasn't updated in 7+ days" />}
+      <span style={styles.iconSlot}>
+        {feed.isStale && <span style={styles.staleIndicator} title="Feed hasn't updated in 7+ days" />}
+      </span>
       <span style={styles.feedName}>{feed.name}</span>
       {feed.unreadCount > 0 && (
         <span style={{ ...styles.badge, ...(isSelected ? styles.badgeSelected : {}) }}>
@@ -201,10 +239,10 @@ function FolderGroup({ name, feeds, selectedFeed, onSelectFeed, onContextMenu }:
 
   return (
     <div style={styles.section}>
-      <button style={styles.folderHeader} onClick={() => setCollapsed(!collapsed)}>
-        <span style={{ ...styles.folderChevron, transform: collapsed ? 'none' : 'rotate(90deg)' }}>▶</span>
+      <div style={styles.folderHeader} onClick={() => setCollapsed(!collapsed)}>
+        <span style={{ ...styles.folderChevron, transform: collapsed ? 'none' : 'rotate(90deg)' }}>›</span>
         <span style={styles.folderName}>{name}</span>
-      </button>
+      </div>
       {!collapsed && feeds.map(feed => (
         <FeedRow
           key={feed.id}
@@ -240,6 +278,8 @@ function FeedContextMenu({ feedId, x, y, onMarkAllRead, onRemove, onClose }: {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles: Record<string, React.CSSProperties> = {
   sidebar: {
     width: 'var(--sidebar-width)',
@@ -250,10 +290,8 @@ const styles: Record<string, React.CSSProperties> = {
     WebkitBackdropFilter: 'saturate(180%) blur(20px)',
     borderRight: '1px solid var(--border)',
     overflowY: 'auto',
-    padding: '0',
     display: 'flex',
     flexDirection: 'column',
-    gap: 0,
     position: 'relative',
   } as any,
   actionRow: {
@@ -295,20 +333,21 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'background 150ms',
   },
   section: {
-    padding: '2px 8px',
+    padding: '0 8px',
   },
   divider: {
     height: 1,
     background: 'var(--border)',
     margin: '6px 12px',
   },
+  // Every row: [iconSlot 20px] [label flex] [badge]
   row: {
     display: 'flex',
     alignItems: 'center',
     width: '100%',
-    padding: '5px 8px',
-    borderRadius: 6,
-    gap: 7,
+    padding: '4px 6px',
+    borderRadius: 5,
+    gap: 6,
     cursor: 'pointer',
     transition: 'background 100ms',
     background: 'none',
@@ -316,16 +355,19 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--text-primary)',
     fontSize: 13,
     textAlign: 'left',
+    fontFamily: 'var(--font-ui)',
   },
   rowSelected: {
     background: 'var(--selection-bg)',
     color: 'var(--selection-text)',
   },
-  smartIcon: {
-    fontSize: 11,
-    color: 'var(--accent)',
-    width: 14,
-    textAlign: 'center',
+  // Fixed-width left column — keeps all labels at the same x
+  iconSlot: {
+    width: 20,
+    height: 16,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 0,
   },
   rowLabel: {
@@ -345,7 +387,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 11,
     fontWeight: 600,
     color: 'var(--accent)',
-    minWidth: 18,
+    minWidth: 20,
     textAlign: 'right',
     flexShrink: 0,
   },
@@ -357,29 +399,29 @@ const styles: Record<string, React.CSSProperties> = {
     height: 5,
     borderRadius: '50%',
     background: '#ff3b30',
-    flexShrink: 0,
     display: 'inline-block',
   },
+  // Folder section label — NOT a button-style row
   folderHeader: {
     display: 'flex',
     alignItems: 'center',
-    width: '100%',
-    padding: '4px 8px',
-    borderRadius: 6,
-    gap: 6,
+    gap: 4,
+    padding: '12px 6px 3px 6px',
     cursor: 'pointer',
-    background: 'none',
-    border: 'none',
-    color: 'var(--text-secondary)',
+    color: 'var(--text-tertiary)',
     fontSize: 11,
     fontWeight: 600,
-    letterSpacing: '0.02em',
+    letterSpacing: '0.05em',
     textTransform: 'uppercase',
-  },
+    userSelect: 'none',
+  } as any,
   folderChevron: {
-    fontSize: 8,
+    fontSize: 12,
+    lineHeight: 1,
     transition: 'transform 150ms',
     display: 'inline-block',
+    color: 'var(--text-tertiary)',
+    marginTop: -1,
   },
   folderName: {
     flex: 1,

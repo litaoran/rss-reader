@@ -5,7 +5,7 @@ const DEFAULT_FEEDS = [
   {
     url: 'https://hnrss.org/frontpage',
     name: 'Hacker News',
-    folder: 'Aggregators',
+    folder: 'News',
   },
   {
     url: 'https://blog.cloudflare.com/rss/',
@@ -25,12 +25,12 @@ const DEFAULT_FEEDS = [
   {
     url: 'https://martinfowler.com/feed.atom',
     name: 'Martin Fowler',
-    folder: 'Individual Engineers',
+    folder: 'Writers',
   },
   {
     url: 'https://newsletter.pragmaticengineer.com/feed',
     name: 'The Pragmatic Engineer',
-    folder: 'Individual Engineers',
+    folder: 'Writers',
   },
 ];
 

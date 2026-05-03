@@ -3,7 +3,7 @@ import { updateElectronApp } from 'update-electron-app';
 import {
   initDb, listFeeds, addFeed, removeFeed, markFeedAllRead, updateFeedLastFetched,
   listArticles, getArticle, markArticleRead, toggleArticleStar,
-  updateScrollProgress, searchArticles, upsertArticles,
+  updateScrollProgress, searchArticles, upsertArticles, renameFeedFolder,
 } from './db';
 import { fetchFeed, discoverFeedUrl } from './fetcher';
 import { seedDefaultFeeds } from './seeds';
@@ -133,6 +133,9 @@ ipcMain.handle('shell:openExternal', (_, url: string) => shell.openExternal(url)
 
 app.on('ready', async () => {
   initDb();
+  // Migrate existing folder names for users upgrading from older versions
+  renameFeedFolder('Aggregators', 'News');
+  renameFeedFolder('Individual Engineers', 'Writers');
   createWindow();
   await seedDefaultFeeds((name, done, total) => {
     mainWindow?.webContents.send('seed:progress', { name, done, total });

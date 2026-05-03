@@ -218,3 +218,7 @@ export function upsertArticles(
   insertMany(articles);
   return inserted;
 }
+
+export function renameFeedFolder(oldFolder: string, newFolder: string): void {
+  getDb().prepare('UPDATE feeds SET folder = ? WHERE folder = ?').run(newFolder, oldFolder);
+}
