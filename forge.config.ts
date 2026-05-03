@@ -29,7 +29,9 @@ const config: ForgeConfig = {
       keychainProfile: 'antenna-notarize',
     },
   },
-  rebuildConfig: {},
+  rebuildConfig: {
+    arch: 'arm64',
+  },
   makers: [
     new MakerZIP({}, ['darwin']),
   ],
