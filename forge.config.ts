@@ -11,7 +11,9 @@ import { rendererConfig } from './webpack.renderer.config';
 
 const config: ForgeConfig = {
   packagerConfig: {
-    asar: true,
+    asar: {
+      unpack: '**/*.node',
+    },
     icon: path.resolve(__dirname, 'assets', 'icon'),
     name: 'Antenna',
     appBundleId: 'com.taoranli.antenna',
