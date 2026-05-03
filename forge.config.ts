@@ -18,7 +18,7 @@ const config: ForgeConfig = {
     name: 'Antenna',
     appBundleId: 'com.taoranli.antenna',
     osxSign: {
-      identity: 'Developer ID Application: Taoran Li (KZBWBMG8MS)',
+      identity: process.env.APPLE_SIGNING_IDENTITY,
       optionsForFile: () => ({
         hardenedRuntime: true,
         entitlements: path.resolve(__dirname, 'entitlements.plist'),
@@ -26,7 +26,7 @@ const config: ForgeConfig = {
       }),
     },
     osxNotarize: {
-      keychainProfile: 'antenna-notarize',
+      keychainProfile: process.env.APPLE_NOTARIZE_PROFILE,
     },
   },
   rebuildConfig: {
