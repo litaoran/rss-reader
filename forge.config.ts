@@ -14,6 +14,18 @@ const config: ForgeConfig = {
     asar: true,
     icon: path.resolve(__dirname, 'assets', 'icon'),
     name: 'Antenna',
+    appBundleId: 'com.taoranli.antenna',
+    osxSign: {
+      identity: 'Developer ID Application: Taoran Li (KZBWBMG8MS)',
+      optionsForFile: () => ({
+        hardenedRuntime: true,
+        entitlements: path.resolve(__dirname, 'entitlements.plist'),
+        'entitlements-inherit': path.resolve(__dirname, 'entitlements.inherit.plist'),
+      }),
+    },
+    osxNotarize: {
+      keychainProfile: 'antenna-notarize',
+    },
   },
   rebuildConfig: {},
   makers: [
