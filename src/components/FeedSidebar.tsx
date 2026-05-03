@@ -14,6 +14,7 @@ interface Props {
 
 interface ContextMenu {
   feedId: number;
+  feedUrl: string;
   x: number;
   y: number;
 }
@@ -35,9 +36,9 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
     }
   }
 
-  const handleContextMenu = useCallback((e: React.MouseEvent, feedId: number) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, feedId: number, feedUrl: string) => {
     e.preventDefault();
-    setContextMenu({ feedId, x: e.clientX, y: e.clientY });
+    setContextMenu({ feedId, feedUrl, x: e.clientX, y: e.clientY });
   }, []);
 
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
@@ -109,7 +110,7 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
               feed={feed}
               isSelected={selectedFeed === feed.id}
               onClick={() => onSelectFeed(feed.id)}
-              onContextMenu={(e) => handleContextMenu(e, feed.id)}
+              onContextMenu={(e) => handleContextMenu(e, feed.id, feed.url)}
             />
           ))}
         </div>
@@ -138,10 +139,12 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
       {contextMenu && (
         <FeedContextMenu
           feedId={contextMenu.feedId}
+          feedUrl={contextMenu.feedUrl}
           x={contextMenu.x}
           y={contextMenu.y}
           onMarkAllRead={() => { onMarkAllRead(contextMenu.feedId); closeContextMenu(); }}
           onRemove={() => { onRemoveFeed(contextMenu.feedId); closeContextMenu(); }}
+          onOpenUrl={() => { window.rss.shell.openExternal(contextMenu.feedUrl); closeContextMenu(); }}
           onClose={closeContextMenu}
         />
       )}
@@ -233,7 +236,7 @@ function FolderGroup({ name, feeds, selectedFeed, onSelectFeed, onContextMenu }:
   feeds: Feed[];
   selectedFeed: SelectedFeed;
   onSelectFeed: (feed: SelectedFeed) => void;
-  onContextMenu: (e: React.MouseEvent, feedId: number) => void;
+  onContextMenu: (e: React.MouseEvent, feedId: number, feedUrl: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -249,19 +252,21 @@ function FolderGroup({ name, feeds, selectedFeed, onSelectFeed, onContextMenu }:
           feed={feed}
           isSelected={selectedFeed === feed.id}
           onClick={() => onSelectFeed(feed.id)}
-          onContextMenu={(e) => onContextMenu(e, feed.id)}
+          onContextMenu={(e) => onContextMenu(e, feed.id, feed.url)}
         />
       ))}
     </div>
   );
 }
 
-function FeedContextMenu({ feedId, x, y, onMarkAllRead, onRemove, onClose }: {
+function FeedContextMenu({ feedId, feedUrl, x, y, onMarkAllRead, onRemove, onOpenUrl, onClose }: {
   feedId: number;
+  feedUrl: string;
   x: number;
   y: number;
   onMarkAllRead: () => void;
   onRemove: () => void;
+  onOpenUrl: () => void;
   onClose: () => void;
 }) {
   return (
@@ -269,6 +274,7 @@ function FeedContextMenu({ feedId, x, y, onMarkAllRead, onRemove, onClose }: {
       <div style={styles.contextOverlay} onClick={onClose} />
       <div style={{ ...styles.contextMenu, left: x, top: y }}>
         <button style={styles.contextItem} onClick={onMarkAllRead}>Mark all as read</button>
+        <button style={styles.contextItem} onClick={onOpenUrl}>Open feed URL</button>
         <div style={styles.contextDivider} />
         <button style={{ ...styles.contextItem, color: '#ff3b30' }} onClick={onRemove}>
           Remove feed
