@@ -60,7 +60,6 @@ The built ZIP lands in `out/make/zip/darwin/arm64/`.
 
 > `npm install` triggers `electron-rebuild` to compile `better-sqlite3` for the correct Electron ABI. Make sure you're running arm64 Node (`node -e "console.log(process.arch)"` should print `arm64`).
 
-> **Code signing:** distribution builds require a Developer ID Application certificate and a notarytool Keychain profile. See `forge.config.ts` for the signing configuration.
 
 ## Tech Stack
 
