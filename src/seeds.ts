@@ -18,7 +18,7 @@ const DEFAULT_FEEDS = [
     folder: 'Big Tech',
   },
   {
-    url: 'https://stripe.com/blog/engineering.rss',
+    url: 'https://stripe.com/blog/feed.rss',
     name: 'Stripe Engineering',
     folder: 'Big Tech',
   },
