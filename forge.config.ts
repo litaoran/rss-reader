@@ -14,8 +14,13 @@ import { rendererConfig } from './webpack.renderer.config';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    arch: 'arm64',
+    icon: './assets/icon',
+    name: 'Antenna',
   },
-  rebuildConfig: {},
+  rebuildConfig: {
+    arch: 'arm64',
+  },
   makers: [
     new MakerSquirrel({}),
     new MakerZIP({}, ['darwin']),

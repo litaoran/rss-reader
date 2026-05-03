@@ -1,8 +1,8 @@
 {
-  "name": "rss-reader",
-  "productName": "RSS Reader",
+  "name": "antenna",
+  "productName": "Antenna",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "Your daily read, curated for engineers.",
   "main": ".webpack/main",
   "private": true,
   "scripts": {
@@ -38,7 +38,7 @@
     "@typescript-eslint/parser": "^5.62.0",
     "@vercel/webpack-asset-relocator-loader": "^1.7.3",
     "css-loader": "^6.11.0",
-    "electron": "41.5.0",
+    "electron": "^41.5.0",
     "eslint": "^8.57.1",
     "eslint-plugin-import": "^2.32.0",
     "fork-ts-checker-webpack-plugin": "^7.3.0",
@@ -53,6 +53,7 @@
     "electron-squirrel-startup": "^1.0.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "rss-parser": "^3.13.0"
+    "rss-parser": "^3.13.0",
+    "update-electron-app": "^3.2.0"
   }
 }

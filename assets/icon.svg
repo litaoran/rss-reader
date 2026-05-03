@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="230" fill="#0a0a0f"/>
+
+  <!-- Signal arcs (centered at 512, 640) -->
+  <!-- Outermost arc -->
+  <path d="M 282 480 A 258 258 0 0 1 742 480"
+        fill="none" stroke="#0a84ff" stroke-width="52" stroke-linecap="round" opacity="0.35"/>
+  <!-- Middle arc -->
+  <path d="M 340 520 A 184 184 0 0 1 684 520"
+        fill="none" stroke="#0a84ff" stroke-width="52" stroke-linecap="round" opacity="0.65"/>
+  <!-- Inner arc -->
+  <path d="M 398 560 A 110 110 0 0 1 626 560"
+        fill="none" stroke="#0a84ff" stroke-width="52" stroke-linecap="round"/>
+
+  <!-- Center dot -->
+  <circle cx="512" cy="628" r="42" fill="#0a84ff"/>
+
+  <!-- Mast line -->
+  <line x1="512" y1="628" x2="512" y2="780"
+        stroke="#0a84ff" stroke-width="46" stroke-linecap="round" opacity="0.5"/>
+</svg>

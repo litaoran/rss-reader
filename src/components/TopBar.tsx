@@ -11,7 +11,7 @@ export function TopBar({ refreshProgress, onSearch }: Props) {
     <div style={styles.bar}>
       <div style={styles.trafficLightSpacer} />
 
-      <span style={styles.title}>RSS Reader</span>
+      <span style={styles.title}>Antenna</span>
 
       <div style={styles.actions}>
         {refreshProgress.isRefreshing && (

@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { updateElectronApp } from 'update-electron-app';
 import {
   initDb, listFeeds, addFeed, removeFeed, markFeedAllRead, updateFeedLastFetched,
   listArticles, getArticle, markArticleRead, toggleArticleStar,
@@ -11,6 +12,8 @@ declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 
 if (require('electron-squirrel-startup')) app.quit();
+
+updateElectronApp({ repo: 'litaoran/rss-reader' });
 
 let mainWindow: BrowserWindow | null = null;
 let refreshTimer: NodeJS.Timeout | null = null;
