@@ -13,6 +13,11 @@ declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 
 if (require('electron-squirrel-startup')) app.quit();
 
+// Prevent Chromium from accessing the macOS keychain for its password/cookie
+// store. Antenna stores no credentials, so the plain store is sufficient and
+// avoids the "Antenna Safe Storage" Keychain prompt on every launch.
+app.commandLine.appendSwitch('password-store', 'basic');
+
 updateElectronApp({ repo: 'litaoran/rss-reader' });
 
 let mainWindow: BrowserWindow | null = null;
