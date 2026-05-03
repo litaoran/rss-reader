@@ -6,7 +6,7 @@ A macOS RSS reader built for engineering blogs. Three-pane layout, permanent art
 
 ## Download
 
-**macOS (Apple Silicon / M-series):** [Antenna-darwin-arm64-1.0.0.zip](https://github.com/litaoran/rss-reader/releases/latest)
+**macOS (Apple Silicon / M-series):** [Antenna-darwin-arm64-1.1.2.zip](https://github.com/litaoran/rss-reader/releases/latest)
 
 Unzip, drag `Antenna.app` to `/Applications`, open.
 
@@ -26,12 +26,12 @@ Unzip, drag `Antenna.app` to `/Applications`, open.
 
 | Folder | Feed |
 |---|---|
-| Aggregators | Hacker News (front page) |
+| News | Hacker News (front page) |
 | Big Tech | Cloudflare Blog |
 | Big Tech | Netflix Tech Blog |
 | Big Tech | Stripe Engineering |
-| Individual Engineers | Martin Fowler |
-| Individual Engineers | The Pragmatic Engineer |
+| Writers | Martin Fowler |
+| Writers | The Pragmatic Engineer |
 
 ## Keyboard Shortcuts
 
