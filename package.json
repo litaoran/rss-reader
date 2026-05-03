@@ -6,8 +6,8 @@
   "main": ".webpack/main",
   "private": true,
   "scripts": {
-    "start": "electron-forge start",
-    "postinstall": "electron-rebuild -f -w better-sqlite3 --arch arm64",
+    "start": "npm_config_arch=arm64 electron-forge start",
+    "postinstall": "npm_config_arch=arm64 electron-rebuild -f -w better-sqlite3 --arch arm64",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
