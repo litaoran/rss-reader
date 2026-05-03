@@ -10,7 +10,10 @@ A macOS RSS reader built for engineering blogs. Three-pane layout, permanent art
 
 Unzip, drag `Antenna.app` to `/Applications`, open.
 
-> **First launch security prompt:** macOS blocks unsigned apps. Right-click `Antenna.app` → **Open** → **Open** to run it once; subsequent launches work normally.
+> **"Damaged" error on first launch:** macOS quarantines apps downloaded from the internet. Run this in Terminal, then open normally:
+> ```bash
+> xattr -cr /Applications/Antenna.app
+> ```
 
 > **Note:** This build is arm64 only (Apple Silicon). Intel Mac support is not available yet.
 
