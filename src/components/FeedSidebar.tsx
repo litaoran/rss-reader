@@ -329,7 +329,7 @@ function FeedContextMenu({ feedId, feedUrl, x, y, folders, onMarkAllRead, onRemo
   return createPortal(
     <>
       <div style={styles.contextOverlay} onClick={onClose} />
-      <div style={{ ...styles.contextMenu, left: clampedX, top: y }}>
+      <div style={{ ...styles.contextMenu, left: clampedX, top: y }} onClick={e => e.stopPropagation()}>
         {view === 'main' ? (
           <>
             <button style={styles.contextItem} onClick={onMarkAllRead}>Mark all as read</button>
