@@ -237,3 +237,16 @@ export function upsertArticles(
 export function renameFeedFolder(oldFolder: string, newFolder: string): void {
   getDb().prepare('UPDATE feeds SET folder = ? WHERE folder = ?').run(newFolder, oldFolder);
 }
+
+/**
+ * Remove articles whose URL contains a known bad pattern from a previous
+ * scraper run (e.g. Uber category/nav links that were mistakenly inserted).
+ * Safe to call on every launch — deletes nothing when already clean.
+ */
+export function cleanupBadArticles(): void {
+  // Old Uber scraper inserted category URLs like /blog/engineering/backend/
+  // Real articles live at /blog/<slug>/ (no /engineering/ in path after /blog/).
+  getDb().prepare(
+    `DELETE FROM articles WHERE url LIKE '%uber.com%/blog/engineering/%'`
+  ).run();
+}

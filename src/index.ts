@@ -4,7 +4,7 @@ import {
   initDb, listFeeds, addFeed, removeFeed, markFeedAllRead, updateFeedLastFetched,
   listArticles, getArticle, markArticleRead, toggleArticleStar,
   updateScrollProgress, updateArticleContent, searchArticles, upsertArticles,
-  renameFeedFolder, updateFeedFolder,
+  renameFeedFolder, updateFeedFolder, cleanupBadArticles,
 } from './db';
 import { fetchFeed, discoverFeedUrl } from './fetcher';
 import { scrapeWithBrowser } from './scrapers/browser';
@@ -172,6 +172,8 @@ app.on('ready', async () => {
   // Migrate existing folder names for users upgrading from older versions
   renameFeedFolder('Aggregators', 'News');
   renameFeedFolder('Individual Engineers', 'Writers');
+  // Remove articles inserted by earlier buggy scrapers
+  cleanupBadArticles();
   createWindow();
   await seedDefaultFeeds((name, done, total) => {
     mainWindow?.webContents.send('seed:progress', { name, done, total });
