@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('rss', {
     add: (url: string, name: string, folder: string | null) =>
       ipcRenderer.invoke('feeds:add', url, name, folder),
     remove: (id: number) => ipcRenderer.invoke('feeds:remove', id),
+    updateFolder: (id: number, folder: string | null) =>
+      ipcRenderer.invoke('feeds:updateFolder', id, folder),
     markAllRead: (id: number) => ipcRenderer.invoke('feeds:markAllRead', id),
   },
   articles: {

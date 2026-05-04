@@ -3,7 +3,7 @@ import { updateElectronApp } from 'update-electron-app';
 import {
   initDb, listFeeds, addFeed, removeFeed, markFeedAllRead, updateFeedLastFetched,
   listArticles, getArticle, markArticleRead, toggleArticleStar,
-  updateScrollProgress, searchArticles, upsertArticles, renameFeedFolder,
+  updateScrollProgress, searchArticles, upsertArticles, renameFeedFolder, updateFeedFolder,
 } from './db';
 import { fetchFeed, discoverFeedUrl } from './fetcher';
 import { seedDefaultFeeds } from './seeds';
@@ -88,6 +88,11 @@ ipcMain.handle('feeds:add', async (_, url: string, name: string, folder: string 
   } catch {}
   mainWindow?.webContents.send('feeds:updated', listFeeds());
   return listFeeds();
+});
+
+ipcMain.handle('feeds:updateFolder', (_, id: number, folder: string | null) => {
+  updateFeedFolder(id, folder);
+  mainWindow?.webContents.send('feeds:updated', listFeeds());
 });
 
 ipcMain.handle('feeds:remove', (_, id: number) => {

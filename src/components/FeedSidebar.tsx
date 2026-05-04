@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Feed, SelectedFeed } from '../types';
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
   onAddFeed: () => void;
   onRefreshAll: () => void;
   isRefreshing: boolean;
+  onMoveToFolder: (feedId: number, folder: string | null) => void;
 }
 
 interface ContextMenu {
@@ -19,8 +20,10 @@ interface ContextMenu {
   y: number;
 }
 
-export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, onRemoveFeed, onAddFeed, onRefreshAll, isRefreshing }: Props) {
+export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, onRemoveFeed, onAddFeed, onRefreshAll, isRefreshing, onMoveToFolder }: Props) {
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
+  const [dragOverFolder, setDragOverFolder] = useState<string | null | 'ungrouped'>(undefined as any);
+  const dragFeedId = useRef<number | null>(null);
   const totalUnread = feeds.reduce((sum, f) => sum + f.unreadCount, 0);
 
   // Group feeds by folder
@@ -42,6 +45,18 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
   }, []);
 
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
+
+  const handleDragStart = useCallback((feedId: number) => {
+    dragFeedId.current = feedId;
+  }, []);
+
+  const handleDrop = useCallback((folder: string | null) => {
+    if (dragFeedId.current !== null) {
+      onMoveToFolder(dragFeedId.current, folder);
+      dragFeedId.current = null;
+    }
+    setDragOverFolder(undefined as any);
+  }, [onMoveToFolder]);
 
   return (
     <div style={styles.sidebar} onClick={closeContextMenu}>
@@ -103,7 +118,12 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
 
       {/* Ungrouped feeds */}
       {ungrouped.length > 0 && (
-        <div style={styles.section}>
+        <div
+          style={{ ...styles.section, ...(dragOverFolder === 'ungrouped' ? styles.dropTarget : {}) }}
+          onDragOver={e => { e.preventDefault(); setDragOverFolder('ungrouped'); }}
+          onDragLeave={() => setDragOverFolder(undefined as any)}
+          onDrop={() => handleDrop(null)}
+        >
           {ungrouped.map(feed => (
             <FeedRow
               key={feed.id}
@@ -111,6 +131,7 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
               isSelected={selectedFeed === feed.id}
               onClick={() => onSelectFeed(feed.id)}
               onContextMenu={(e) => handleContextMenu(e, feed.id, feed.url)}
+              onDragStart={() => handleDragStart(feed.id)}
             />
           ))}
         </div>
@@ -125,6 +146,11 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
           selectedFeed={selectedFeed}
           onSelectFeed={onSelectFeed}
           onContextMenu={handleContextMenu}
+          isDragOver={dragOverFolder === folder}
+          onDragOver={() => setDragOverFolder(folder)}
+          onDragLeave={() => setDragOverFolder(undefined as any)}
+          onDrop={() => handleDrop(folder)}
+          onFeedDragStart={handleDragStart}
         />
       ))}
 
@@ -205,17 +231,20 @@ function SmartRow({ icon, label, count, isSelected, onClick, hideCount }: {
   );
 }
 
-function FeedRow({ feed, isSelected, onClick, onContextMenu }: {
+function FeedRow({ feed, isSelected, onClick, onContextMenu, onDragStart }: {
   feed: Feed;
   isSelected: boolean;
   onClick: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
+  onDragStart?: () => void;
 }) {
   return (
     <button
+      draggable
       style={{ ...styles.row, ...(isSelected ? styles.rowSelected : {}) }}
       onClick={onClick}
       onContextMenu={onContextMenu}
+      onDragStart={onDragStart}
       title={feed.url}
     >
       <span style={styles.iconSlot}>
@@ -231,17 +260,27 @@ function FeedRow({ feed, isSelected, onClick, onContextMenu }: {
   );
 }
 
-function FolderGroup({ name, feeds, selectedFeed, onSelectFeed, onContextMenu }: {
+function FolderGroup({ name, feeds, selectedFeed, onSelectFeed, onContextMenu, isDragOver, onDragOver, onDragLeave, onDrop, onFeedDragStart }: {
   name: string;
   feeds: Feed[];
   selectedFeed: SelectedFeed;
   onSelectFeed: (feed: SelectedFeed) => void;
   onContextMenu: (e: React.MouseEvent, feedId: number, feedUrl: string) => void;
+  isDragOver: boolean;
+  onDragOver: () => void;
+  onDragLeave: () => void;
+  onDrop: () => void;
+  onFeedDragStart: (feedId: number) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div style={styles.section}>
+    <div
+      style={{ ...styles.section, ...(isDragOver ? styles.dropTarget : {}) }}
+      onDragOver={e => { e.preventDefault(); onDragOver(); }}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
       <div style={styles.folderHeader} onClick={() => setCollapsed(!collapsed)}>
         <span style={{ ...styles.folderChevron, transform: collapsed ? 'none' : 'rotate(90deg)' }}>›</span>
         <span style={styles.folderName}>{name}</span>
@@ -253,6 +292,7 @@ function FolderGroup({ name, feeds, selectedFeed, onSelectFeed, onContextMenu }:
           isSelected={selectedFeed === feed.id}
           onClick={() => onSelectFeed(feed.id)}
           onContextMenu={(e) => onContextMenu(e, feed.id, feed.url)}
+          onDragStart={() => onFeedDragStart(feed.id)}
         />
       ))}
     </div>
@@ -446,6 +486,11 @@ const styles: Record<string, React.CSSProperties> = {
   emptyIcon: { fontSize: 28 },
   emptyText: { fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)' },
   emptyHint: { fontSize: 12, color: 'var(--text-tertiary)' },
+  dropTarget: {
+    borderRadius: 6,
+    outline: '2px solid var(--accent)',
+    outlineOffset: -2,
+  },
   contextOverlay: {
     position: 'fixed',
     inset: 0,

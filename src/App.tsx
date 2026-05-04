@@ -150,6 +150,10 @@ export function App() {
     }
   }, [selectedFeed]);
 
+  const handleMoveToFolder = useCallback(async (feedId: number, folder: string | null) => {
+    await window.rss.feeds.updateFolder(feedId, folder);
+  }, []);
+
   return (
     <div style={styles.app}>
       <TopBar
@@ -166,6 +170,7 @@ export function App() {
           onAddFeed={() => setShowAddFeed(true)}
           onRefreshAll={handleRefreshAll}
           isRefreshing={refreshProgress.isRefreshing}
+          onMoveToFolder={handleMoveToFolder}
         />
         <ArticleList
           articles={articles}

@@ -104,6 +104,10 @@ export function removeFeed(id: number) {
   getDb().prepare('UPDATE feeds SET isActive = 0 WHERE id = ?').run(id);
 }
 
+export function updateFeedFolder(id: number, folder: string | null) {
+  getDb().prepare('UPDATE feeds SET folder = ? WHERE id = ?').run(folder, id);
+}
+
 export function markFeedAllRead(feedId: number) {
   getDb().prepare('UPDATE articles SET isRead = 1 WHERE feedId = ?').run(feedId);
 }
