@@ -187,6 +187,10 @@ export function updateScrollProgress(id: number, progress: number) {
   getDb().prepare('UPDATE articles SET scrollProgress = ? WHERE id = ?').run(progress, id);
 }
 
+export function updateArticleContent(id: number, content: string) {
+  getDb().prepare('UPDATE articles SET content = ? WHERE id = ?').run(content, id);
+}
+
 export function searchArticles(query: string): Article[] {
   return (getDb().prepare(`
     SELECT a.*, f.name as feedName

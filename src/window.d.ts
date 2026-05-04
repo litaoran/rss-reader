@@ -6,6 +6,7 @@ interface RssApi {
     discover: (url: string) => Promise<FeedDiscovery>;
     add: (url: string, name: string, folder: string | null) => Promise<Feed[]>;
     remove: (id: number) => Promise<void>;
+    updateFolder: (id: number, folder: string | null) => Promise<void>;
     markAllRead: (id: number) => Promise<void>;
   };
   articles: {
@@ -17,6 +18,7 @@ interface RssApi {
       offset?: number;
     }) => Promise<Article[]>;
     get: (id: number) => Promise<ArticleWithContent | null>;
+    fetchContent: (id: number) => Promise<string | null>;
     markRead: (id: number) => Promise<void>;
     toggleStar: (id: number) => Promise<void>;
     updateProgress: (id: number, progress: number) => Promise<void>;

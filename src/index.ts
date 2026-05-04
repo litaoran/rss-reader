@@ -3,9 +3,12 @@ import { updateElectronApp } from 'update-electron-app';
 import {
   initDb, listFeeds, addFeed, removeFeed, markFeedAllRead, updateFeedLastFetched,
   listArticles, getArticle, markArticleRead, toggleArticleStar,
-  updateScrollProgress, searchArticles, upsertArticles, renameFeedFolder, updateFeedFolder,
+  updateScrollProgress, updateArticleContent, searchArticles, upsertArticles,
+  renameFeedFolder, updateFeedFolder,
 } from './db';
 import { fetchFeed, discoverFeedUrl } from './fetcher';
+import { scrapeWithBrowser } from './scrapers/browser';
+import { EXTRACT_ARTICLE_CONTENT_JS } from './scrapers/uber';
 import { seedDefaultFeeds } from './seeds';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
@@ -110,6 +113,21 @@ ipcMain.handle('articles:list', (_, feedId: number | null, options: any) =>
 );
 
 ipcMain.handle('articles:get', (_, id: number) => getArticle(id));
+
+ipcMain.handle('articles:fetchContent', async (_, id: number) => {
+  const article = getArticle(id);
+  if (!article) return null;
+  if (article.content) return article.content; // already stored
+
+  try {
+    const html = await scrapeWithBrowser<string>(article.url, EXTRACT_ARTICLE_CONTENT_JS, { waitMs: 2500 });
+    if (html) updateArticleContent(id, html);
+    return html;
+  } catch (e) {
+    console.error(`Failed to fetch content for article ${id}:`, e);
+    return null;
+  }
+});
 
 ipcMain.handle('articles:markRead', (_, id: number) => markArticleRead(id));
 

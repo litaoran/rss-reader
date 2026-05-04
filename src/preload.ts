@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('rss', {
     list: (feedId: number | null, options: object) =>
       ipcRenderer.invoke('articles:list', feedId, options),
     get: (id: number) => ipcRenderer.invoke('articles:get', id),
+    fetchContent: (id: number) => ipcRenderer.invoke('articles:fetchContent', id),
     markRead: (id: number) => ipcRenderer.invoke('articles:markRead', id),
     toggleStar: (id: number) => ipcRenderer.invoke('articles:toggleStar', id),
     updateProgress: (id: number, progress: number) =>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { ArticleWithContent } from '../types';
 
 interface Props {
@@ -12,6 +12,23 @@ export function ReadingPane({ article, onToggleStar, onOpenExternal, onProgress 
   const scrollRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef(0);
   const saveTimer = useRef<NodeJS.Timeout | null>(null);
+  const [fetchedContent, setFetchedContent] = useState<string | null>(null);
+  const [isFetchingContent, setIsFetchingContent] = useState(false);
+
+  // When an article with no content is opened, fetch it on demand
+  useEffect(() => {
+    setFetchedContent(null);
+    if (!article || article.content) return;
+
+    setIsFetchingContent(true);
+    window.rss.articles.fetchContent(article.id).then((html: string | null) => {
+      setFetchedContent(html || '');
+      setIsFetchingContent(false);
+    }).catch(() => {
+      setFetchedContent('');
+      setIsFetchingContent(false);
+    });
+  }, [article?.id]);
 
   // Restore scroll position and save progress on scroll
   useEffect(() => {
@@ -95,7 +112,11 @@ export function ReadingPane({ article, onToggleStar, onOpenExternal, onProgress 
           {/* Body */}
           <div
             style={styles.body}
-            dangerouslySetInnerHTML={{ __html: sanitize(article.content || article.summary || '<p>No content available.</p>') }}
+            dangerouslySetInnerHTML={{ __html:
+              isFetchingContent
+                ? '<p style="color:var(--text-tertiary)">Loading article…</p>'
+                : sanitize(article.content || fetchedContent || article.summary || '<p>No content available.</p>')
+            }}
           />
         </div>
       </div>

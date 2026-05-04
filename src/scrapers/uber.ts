@@ -3,49 +3,71 @@ import { scrapeWithBrowser } from './browser';
 import { ParsedFeed } from '../fetcher';
 
 // JS executed inside the hidden BrowserWindow after the page renders.
-// Tries several selector patterns so it stays robust across minor redesigns.
-const EXTRACT_JS = `
+const EXTRACT_LIST_JS = `
 (() => {
   const results = [];
   const seen = new Set();
 
-  // Walk all anchors that look like blog post links
-  const anchors = Array.from(document.querySelectorAll('a[href*="/blog/"]'));
+  const anchors = Array.from(document.querySelectorAll('a[href*="/blog/engineering/"]'));
   anchors.forEach(a => {
     const href = a.href;
-    // Skip category/pagination links — real posts have deeper paths
-    const pathParts = new URL(href).pathname.replace(/\\/$/, '').split('/').filter(Boolean);
-    if (pathParts.length < 4) return;
+    const pathname = new URL(href).pathname.replace(/\\/$/, '');
+    const parts = pathname.split('/').filter(Boolean);
+
+    // Must have a slug after /blog/engineering/ — skip category & pagination pages
+    const engIdx = parts.indexOf('engineering');
+    if (engIdx === -1 || parts.length <= engIdx + 1) return;
+    // Skip known non-article paths
+    if (['page', 'pubs', 'web', 'security', 'data', 'mobile', 'backend',
+         'culture', 'uber-ai', 'aarhus'].includes(parts[engIdx + 1])) return;
     if (seen.has(href)) return;
     seen.add(href);
 
-    // Walk up to find a card-like container with more metadata
+    // Walk up to find a card container
     let el = a;
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 8; i++) {
       if (!el.parentElement) break;
       el = el.parentElement;
-      if (el.querySelectorAll('a[href*="/blog/"]').length === 1) break;
+      if (el.querySelectorAll('a[href*="/blog/engineering/"]').length === 1) break;
     }
 
     const title =
       el.querySelector('h1, h2, h3, h4, [class*="title"], [class*="headline"]')?.textContent?.trim()
       || a.textContent?.trim();
 
+    if (!title || title.length < 8) return;
+
     const dateEl = el.querySelector('time, [class*="date"], [class*="publish"]');
     const date = dateEl?.getAttribute('datetime') || dateEl?.textContent?.trim();
-
-    const summary = el.querySelector(
-      'p, [class*="summary"], [class*="excerpt"], [class*="description"]'
-    )?.textContent?.trim();
-
+    const summary = el.querySelector('p, [class*="summary"], [class*="excerpt"], [class*="description"]')?.textContent?.trim();
     const author = el.querySelector('[class*="author"], [rel="author"]')?.textContent?.trim();
 
-    if (title && title.length > 5) {
-      results.push({ title, url: href, date, summary, author });
-    }
+    results.push({ title, url: href, date, summary, author });
   });
 
   return results;
+})()
+`;
+
+// JS run inside a loaded article page to extract its main content HTML.
+export const EXTRACT_ARTICLE_CONTENT_JS = `
+(() => {
+  // Remove clutter before extracting
+  ['script','style','nav','footer','header','aside',
+   '[role="navigation"]','[role="banner"]','[role="complementary"]',
+   '[class*="related"]','[class*="recommend"]','[class*="sidebar"]',
+   '[class*="newsletter"]','[class*="subscribe"]','[class*="comment"]',
+   '[class*="cookie"]','[class*="banner"]'
+  ].forEach(sel => document.querySelectorAll(sel).forEach(el => el.remove()));
+
+  const article =
+    document.querySelector('article') ||
+    document.querySelector('[class*="article-body"]') ||
+    document.querySelector('[class*="post-content"]') ||
+    document.querySelector('[class*="blog-content"]') ||
+    document.querySelector('main');
+
+  return article ? article.innerHTML : '';
 })()
 `;
 
@@ -55,7 +77,7 @@ export const uberScraper: ScraperAdapter = {
   matches: (url) => /uber\.com.*\/blog\/engineering/.test(url),
 
   async scrape(url): Promise<ParsedFeed> {
-    const raw = await scrapeWithBrowser<ScrapedArticle[]>(url, EXTRACT_JS, { waitMs: 3000 });
+    const raw = await scrapeWithBrowser<ScrapedArticle[]>(url, EXTRACT_LIST_JS, { waitMs: 3000 });
 
     const articles = raw.map((item) => {
       const publishedAt = item.date ? new Date(item.date).getTime() : Date.now();
