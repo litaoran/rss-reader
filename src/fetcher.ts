@@ -68,15 +68,29 @@ export async function discoverFeedUrl(rawUrl: string): Promise<string> {
     return url;
   } catch {}
 
-  // Common feed paths to try
+  // Common feed paths to try — root-level and blog-subdirectory variants
   const base = new URL(url).origin;
+  const path = new URL(url).pathname.replace(/\/$/, ''); // e.g. "/blog"
   const candidates = [
+    // Root-level
     `${base}/feed`,
     `${base}/feed.xml`,
+    `${base}/feed.atom`,
     `${base}/rss`,
     `${base}/rss.xml`,
     `${base}/atom.xml`,
-    `${base}/blog/feed`,
+    `${base}/index.xml`,
+    // Path-relative (e.g. https://go.dev/blog → tries /blog/feed.atom)
+    ...(path ? [
+      `${base}${path}/feed`,
+      `${base}${path}/feed.xml`,
+      `${base}${path}/feed.atom`,
+      `${base}${path}/rss`,
+      `${base}${path}/rss.xml`,
+      `${base}${path}/atom.xml`,
+      `${base}${path}/index.xml`,
+    ] : []),
+    // Blogger / legacy
     `${base}/feeds/posts/default`,
   ];
 
