@@ -93,11 +93,18 @@ export function listFeeds(): Feed[] {
 }
 
 export function addFeed(url: string, name: string, folder: string | null): Feed {
-  const info = getDb().prepare(
-    'INSERT OR IGNORE INTO feeds (url, name, folder) VALUES (?, ?, ?)'
+  const db = getDb();
+  // If the URL already exists (e.g. was previously removed), reactivate it
+  const existing = db.prepare('SELECT id FROM feeds WHERE url = ?').get(url) as { id: number } | undefined;
+  if (existing) {
+    db.prepare('UPDATE feeds SET name = ?, folder = ?, isActive = 1 WHERE id = ?')
+      .run(name, folder, existing.id);
+    return { id: existing.id, url, name, folder, lastFetched: null, unreadCount: 0, isStale: false };
+  }
+  const { lastInsertRowid: id } = db.prepare(
+    'INSERT INTO feeds (url, name, folder) VALUES (?, ?, ?)'
   ).run(url, name, folder);
-  const id = info.lastInsertRowid as number;
-  return { id, url, name, folder, lastFetched: null, unreadCount: 0, isStale: false };
+  return { id: id as number, url, name, folder, lastFetched: null, unreadCount: 0, isStale: false };
 }
 
 export function removeFeed(id: number) {
