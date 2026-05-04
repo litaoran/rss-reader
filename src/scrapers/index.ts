@@ -1,0 +1,16 @@
+import { ScraperAdapter } from './types';
+import { uberScraper } from './uber';
+
+/**
+ * Registry of all scraper adapters.
+ * To add a new site: create src/scrapers/<site>.ts, export a ScraperAdapter,
+ * and add it to this array.
+ */
+const adapters: ScraperAdapter[] = [
+  uberScraper,
+];
+
+/** Returns the first adapter that claims this URL, or null. */
+export function findAdapter(url: string): ScraperAdapter | null {
+  return adapters.find(a => a.matches(url)) ?? null;
+}

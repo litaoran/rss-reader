@@ -1,5 +1,6 @@
 import Parser from 'rss-parser';
 import https from 'https';
+import { findAdapter } from './scrapers/index';
 
 // Some feeds (e.g. Netflix Tech Blog) use intermediate CAs not in Node's
 // default bundle. For an RSS reader fetching public content this is fine.
@@ -35,6 +36,9 @@ export interface ParsedFeed {
 }
 
 export async function fetchFeed(url: string): Promise<ParsedFeed> {
+  const adapter = findAdapter(url);
+  if (adapter) return adapter.scrape(url);
+
   const feed = await parser.parseURL(url);
   const articles: ParsedArticle[] = (feed.items || []).map(item => {
     const content = (item as any)['content:encoded'] || item.content || item.description || '';
@@ -62,6 +66,9 @@ export async function fetchFeed(url: string): Promise<ParsedFeed> {
 
 export async function discoverFeedUrl(rawUrl: string): Promise<string> {
   const url = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
+
+  // Check scraper adapters first — these handle sites with no RSS feed
+  if (findAdapter(url)) return url;
 
   // Try the URL directly first
   try {
