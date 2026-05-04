@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Feed, SelectedFeed } from '../types';
 
 interface Props {
@@ -321,10 +322,14 @@ function FeedContextMenu({ feedId, feedUrl, x, y, folders, onMarkAllRead, onRemo
     if (name) onMoveToFolder(name);
   };
 
-  return (
+  // Keep menu on-screen: clamp left so it doesn't overflow the right edge
+  const menuWidth = 200;
+  const clampedX = Math.min(x, window.innerWidth - menuWidth - 8);
+
+  return createPortal(
     <>
       <div style={styles.contextOverlay} onClick={onClose} />
-      <div style={{ ...styles.contextMenu, left: x, top: y }}>
+      <div style={{ ...styles.contextMenu, left: clampedX, top: y }}>
         {view === 'main' ? (
           <>
             <button style={styles.contextItem} onClick={onMarkAllRead}>Mark all as read</button>
@@ -373,7 +378,8 @@ function FeedContextMenu({ feedId, feedUrl, x, y, folders, onMarkAllRead, onRemo
           </>
         )}
       </div>
-    </>
+    </>,
+    document.body
   );
 }
 
