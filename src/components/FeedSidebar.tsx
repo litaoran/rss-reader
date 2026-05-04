@@ -168,9 +168,11 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
           feedUrl={contextMenu.feedUrl}
           x={contextMenu.x}
           y={contextMenu.y}
+          folders={Array.from(grouped.keys())}
           onMarkAllRead={() => { onMarkAllRead(contextMenu.feedId); closeContextMenu(); }}
           onRemove={() => { onRemoveFeed(contextMenu.feedId); closeContextMenu(); }}
           onOpenUrl={() => { window.rss.shell.openExternal(contextMenu.feedUrl); closeContextMenu(); }}
+          onMoveToFolder={(folder) => { onMoveToFolder(contextMenu.feedId, folder); closeContextMenu(); }}
           onClose={closeContextMenu}
         />
       )}
@@ -299,26 +301,77 @@ function FolderGroup({ name, feeds, selectedFeed, onSelectFeed, onContextMenu, i
   );
 }
 
-function FeedContextMenu({ feedId, feedUrl, x, y, onMarkAllRead, onRemove, onOpenUrl, onClose }: {
+function FeedContextMenu({ feedId, feedUrl, x, y, folders, onMarkAllRead, onRemove, onOpenUrl, onMoveToFolder, onClose }: {
   feedId: number;
   feedUrl: string;
   x: number;
   y: number;
+  folders: string[];
   onMarkAllRead: () => void;
   onRemove: () => void;
   onOpenUrl: () => void;
+  onMoveToFolder: (folder: string | null) => void;
   onClose: () => void;
 }) {
+  const [view, setView] = useState<'main' | 'folder'>('main');
+  const [newFolderName, setNewFolderName] = useState('');
+
+  const handleNewFolder = () => {
+    const name = newFolderName.trim();
+    if (name) onMoveToFolder(name);
+  };
+
   return (
     <>
       <div style={styles.contextOverlay} onClick={onClose} />
       <div style={{ ...styles.contextMenu, left: x, top: y }}>
-        <button style={styles.contextItem} onClick={onMarkAllRead}>Mark all as read</button>
-        <button style={styles.contextItem} onClick={onOpenUrl}>Open feed URL</button>
-        <div style={styles.contextDivider} />
-        <button style={{ ...styles.contextItem, color: '#ff3b30' }} onClick={onRemove}>
-          Remove feed
-        </button>
+        {view === 'main' ? (
+          <>
+            <button style={styles.contextItem} onClick={onMarkAllRead}>Mark all as read</button>
+            <button style={styles.contextItem} onClick={onOpenUrl}>Open feed URL</button>
+            <button style={styles.contextItem} onClick={() => setView('folder')}>
+              <span style={{ flex: 1, textAlign: 'left' }}>Move to folder</span>
+              <span style={{ color: 'var(--text-tertiary)' }}>›</span>
+            </button>
+            <div style={styles.contextDivider} />
+            <button style={{ ...styles.contextItem, color: '#ff3b30' }} onClick={onRemove}>
+              Remove feed
+            </button>
+          </>
+        ) : (
+          <>
+            <button style={{ ...styles.contextItem, color: 'var(--text-tertiary)', fontSize: 12 }} onClick={() => setView('main')}>
+              ‹ Back
+            </button>
+            <div style={styles.contextDivider} />
+            <button style={styles.contextItem} onClick={() => onMoveToFolder(null)}>
+              No folder
+            </button>
+            {folders.map(folder => (
+              <button key={folder} style={styles.contextItem} onClick={() => onMoveToFolder(folder)}>
+                {folder}
+              </button>
+            ))}
+            <div style={styles.contextDivider} />
+            <div style={styles.contextNewFolder}>
+              <input
+                autoFocus
+                style={styles.contextFolderInput}
+                placeholder="New folder…"
+                value={newFolderName}
+                onChange={e => setNewFolderName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleNewFolder(); e.stopPropagation(); }}
+              />
+              <button
+                style={{ ...styles.contextItem, color: 'var(--accent)', paddingTop: 4, paddingBottom: 4 }}
+                onClick={handleNewFolder}
+                disabled={!newFolderName.trim()}
+              >
+                Create
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </>
   );
@@ -507,7 +560,8 @@ const styles: Record<string, React.CSSProperties> = {
     minWidth: 160,
   },
   contextItem: {
-    display: 'block',
+    display: 'flex',
+    alignItems: 'center',
     width: '100%',
     padding: '6px 14px',
     fontSize: 13,
@@ -517,10 +571,29 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--text-primary)',
     textAlign: 'left',
     transition: 'background 100ms',
+    fontFamily: 'var(--font-ui)',
   },
   contextDivider: {
     height: 1,
     background: 'var(--border)',
     margin: '4px 0',
+  },
+  contextNewFolder: {
+    padding: '4px 8px 6px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+  },
+  contextFolderInput: {
+    width: '100%',
+    padding: '5px 8px',
+    fontSize: 12,
+    borderRadius: 5,
+    border: '1px solid var(--border-strong)',
+    background: 'var(--bg-primary)',
+    color: 'var(--text-primary)',
+    fontFamily: 'var(--font-ui)',
+    outline: 'none',
+    boxSizing: 'border-box',
   },
 };
