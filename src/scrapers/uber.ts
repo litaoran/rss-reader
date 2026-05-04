@@ -14,21 +14,25 @@ const EXTRACT_LIST_JS = `
     const pathname = new URL(href).pathname.replace(/\\/$/, '');
     const parts = pathname.split('/').filter(Boolean);
 
-    // Must have a slug after /blog/engineering/ — skip category & pagination pages
+    // Must have a slug after /blog/engineering/
     const engIdx = parts.indexOf('engineering');
     if (engIdx === -1 || parts.length <= engIdx + 1) return;
-    // Skip known non-article paths
-    if (['page', 'pubs', 'web', 'security', 'data', 'mobile', 'backend',
-         'culture', 'uber-ai', 'aarhus'].includes(parts[engIdx + 1])) return;
+    // Real article slugs are long multi-word strings (e.g. "ansible-automation-uber-corporate-network")
+    // Sub-category slugs are short single words (earn, backend, health, mobile, etc.)
+    const slug = parts[engIdx + 1];
+    if (slug.length < 15) return;
     if (seen.has(href)) return;
     seen.add(href);
 
-    // Walk up to find a card container
+    // Walk up to find a card container that contains only this article link
     let el = a;
     for (let i = 0; i < 8; i++) {
       if (!el.parentElement) break;
       el = el.parentElement;
-      if (el.querySelectorAll('a[href*="/blog/engineering/"]').length === 1) break;
+      // Stop when we find a container wrapping exactly this article
+      const siblingLinks = Array.from(el.querySelectorAll('a[href*="/blog/engineering/"]'))
+        .filter(x => x.href && new URL(x.href).pathname.split('/').filter(Boolean).at(-1)?.length >= 15);
+      if (siblingLinks.length === 1) break;
     }
 
     const title =

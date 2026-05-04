@@ -103,7 +103,13 @@ export function ReadingPane({ article, onToggleStar, onOpenExternal, onProgress 
                 </>
               )}
             </div>
-            <h1 style={styles.title}>{article.title}</h1>
+            <h1
+              style={{ ...styles.title, cursor: 'pointer' }}
+              onClick={() => onOpenExternal(article.url)}
+              title={article.url}
+            >
+              {article.title} <span style={{ fontSize: '0.5em', verticalAlign: 'middle', opacity: 0.4 }}>↗</span>
+            </h1>
             {article.author && (
               <div style={styles.author}>by {article.author}</div>
             )}
