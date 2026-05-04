@@ -194,6 +194,7 @@ export function App() {
         <AddFeedSheet
           onClose={() => setShowAddFeed(false)}
           onAdded={handleFeedAdded}
+          existingFolders={[...new Set(feeds.map(f => f.folder).filter(Boolean) as string[])]}
         />
       )}
       {showSearch && (

@@ -4,11 +4,12 @@ import { Feed, FeedDiscovery } from '../types';
 interface Props {
   onClose: () => void;
   onAdded: (feeds: Feed[]) => void;
+  existingFolders: string[];
 }
 
 type Step = 'input' | 'preview' | 'loading' | 'error';
 
-export function AddFeedSheet({ onClose, onAdded }: Props) {
+export function AddFeedSheet({ onClose, onAdded, existingFolders }: Props) {
   const [url, setUrl] = useState('');
   const [step, setStep] = useState<Step>('input');
   const [discovery, setDiscovery] = useState<FeedDiscovery | null>(null);
@@ -97,10 +98,24 @@ export function AddFeedSheet({ onClose, onAdded }: Props) {
 
               <div style={styles.field}>
                 <label style={styles.label}>Folder (optional)</label>
+                {existingFolders.length > 0 && (
+                  <div style={styles.folderChips}>
+                    {existingFolders.map(f => (
+                      <button
+                        key={f}
+                        style={{ ...styles.chip, ...(folder === f ? styles.chipSelected : {}) }}
+                        onClick={() => setFolder(folder === f ? '' : f)}
+                        type="button"
+                      >
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <input
                   style={styles.input}
                   type="text"
-                  placeholder="e.g. Engineering"
+                  placeholder="Or type a new folder name…"
                   value={folder}
                   onChange={e => setFolder(e.target.value)}
                 />
@@ -203,6 +218,29 @@ const styles: Record<string, React.CSSProperties> = {
     outline: 'none',
     transition: 'border-color 150ms',
     width: '100%',
+  },
+  folderChips: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 6,
+  } as React.CSSProperties,
+  chip: {
+    padding: '3px 10px',
+    borderRadius: 20,
+    fontSize: 12,
+    fontWeight: 500,
+    cursor: 'pointer',
+    border: '1px solid var(--border-strong)',
+    background: 'var(--bg-secondary)',
+    color: 'var(--text-secondary)',
+    fontFamily: 'var(--font-ui)',
+    transition: 'all 100ms',
+  },
+  chipSelected: {
+    background: 'var(--accent-subtle)',
+    borderColor: 'var(--accent)',
+    color: 'var(--accent)',
   },
   loading: {
     fontSize: 13,
