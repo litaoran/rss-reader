@@ -1,5 +1,5 @@
-import { ScraperAdapter, ScrapedArticle } from './types';
-import { scrapeWithBrowser } from './browser';
+import { ScraperAdapter } from './types';
+import { scrapeWithBrowser, ScrapedArticle } from './browser';
 import { ParsedFeed } from '../fetcher';
 
 // JS executed inside the hidden BrowserWindow after the page renders.

@@ -76,16 +76,24 @@ async function refreshAllFeeds() {
 
 ipcMain.handle('feeds:list', () => listFeeds());
 
+// Cache discovery results for 10 min so feeds:add doesn't re-scrape
+const discoveryCache = new Map<string, { parsed: any; expiresAt: number }>();
+
 ipcMain.handle('feeds:discover', async (_, url: string) => {
   const feedUrl = await discoverFeedUrl(url);
   const parsed = await fetchFeed(feedUrl);
+  discoveryCache.set(feedUrl, { parsed, expiresAt: Date.now() + 10 * 60 * 1000 });
   return { feedUrl, name: parsed.name, articleCount: parsed.articles.length };
 });
 
 ipcMain.handle('feeds:add', async (_, url: string, name: string, folder: string | null) => {
   const feed = addFeed(url, name, folder);
   try {
-    const parsed = await fetchFeed(url);
+    const cached = discoveryCache.get(url);
+    const parsed = (cached && cached.expiresAt > Date.now())
+      ? cached.parsed
+      : await fetchFeed(url);
+    discoveryCache.delete(url);
     upsertArticles(feed.id, parsed.articles);
     updateFeedLastFetched(feed.id);
   } catch {}
