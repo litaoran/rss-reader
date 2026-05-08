@@ -76,9 +76,11 @@ export function ReadingPane({ article, onToggleStar, onOpenExternal, onProgress 
     );
   }
 
-  const pubDate = new Date(article.publishedAt).toLocaleDateString(undefined, {
-    year: 'numeric', month: 'long', day: 'numeric',
-  });
+  const pubDate = article.publishedAt
+    ? new Date(article.publishedAt).toLocaleDateString(undefined, {
+        year: 'numeric', month: 'long', day: 'numeric',
+      })
+    : null;
 
   return (
     <div style={styles.pane}>
@@ -95,7 +97,7 @@ export function ReadingPane({ article, onToggleStar, onOpenExternal, onProgress 
             <div style={styles.feedMeta}>
               <span style={styles.feedName}>{article.feedName}</span>
               <span style={styles.dot}>·</span>
-              <span style={styles.pubDate}>{pubDate}</span>
+              <span style={styles.pubDate}>{pubDate ?? 'Date unknown'}</span>
               {article.readTimeMin > 0 && (
                 <>
                   <span style={styles.dot}>·</span>
@@ -107,6 +109,8 @@ export function ReadingPane({ article, onToggleStar, onOpenExternal, onProgress 
               style={{ ...styles.title, cursor: 'pointer' }}
               onClick={() => onOpenExternal(article.url)}
               title={article.url}
+              onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+              onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
             >
               {article.title} <span style={{ fontSize: '0.5em', verticalAlign: 'middle', opacity: 0.4 }}>↗</span>
             </h1>
@@ -117,37 +121,20 @@ export function ReadingPane({ article, onToggleStar, onOpenExternal, onProgress 
 
           {/* Body */}
           <div
+            className="article-body"
             style={styles.body}
             dangerouslySetInnerHTML={{ __html:
               isFetchingContent
                 ? '<p style="color:var(--text-tertiary)">Loading article…</p>'
-                : sanitize(article.content || fetchedContent || article.summary || '<p>No content available.</p>')
+                : sanitize(
+                    article.content || fetchedContent || article.summary || '<p>No content available.</p>',
+                    article.url,
+                  )
             }}
           />
         </div>
       </div>
 
-      {/* Action strip */}
-      <div style={styles.actions}>
-        <button
-          style={styles.actionButton}
-          onClick={() => onToggleStar(article.id)}
-          title="Star (b)"
-        >
-          <span style={{ color: article.isStarred ? '#ffcc00' : 'var(--text-secondary)' }}>
-            {article.isStarred ? '★' : '☆'}
-          </span>
-          {article.isStarred ? 'Starred' : 'Star'}
-        </button>
-        <button
-          style={styles.actionButton}
-          onClick={() => onOpenExternal(article.url)}
-          title="Open in browser"
-        >
-          <span>↗</span>
-          Open in Browser
-        </button>
-      </div>
     </div>
   );
 }
@@ -163,12 +150,34 @@ function ShortcutRow({ keys, label }: { keys: string[]; label: string }) {
   );
 }
 
-function sanitize(html: string): string {
-  // Strip script tags and dangerous attributes for basic safety
-  return html
+function sanitize(html: string, baseUrl?: string): string {
+  let result = html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/on\w+="[^"]*"/g, '')
     .replace(/javascript:/gi, '');
+
+  // Resolve relative URLs in src and href attributes using the article URL as base
+  if (baseUrl) {
+    try {
+      const base = new URL(baseUrl);
+      // Fix img src and add referrerpolicy="no-referrer" to avoid hotlink protection rejections
+      result = result.replace(/(<img)([^>]+src=["'])([^"']+)(["'])/gi, (_, tag, pre, src, post) => {
+        try {
+          const resolved = new URL(src, base).href;
+          return `${tag} referrerpolicy="no-referrer"${pre}${resolved}${post}`;
+        } catch { return `${tag} referrerpolicy="no-referrer"${pre}${src}${post}`; }
+      });
+      // Fix srcset
+      result = result.replace(/(<img[^>]+srcset=["'])([^"']+)(["'])/gi, (_, pre, srcset, post) => {
+        const fixed = srcset.replace(/([^\s,]+)(\s*(?:\d+[wx])?\s*(?:,|$))/g, (m: string, u: string, rest: string) => {
+          try { return new URL(u, base).href + rest; } catch { return m; }
+        });
+        return pre + fixed + post;
+      });
+    } catch {}
+  }
+
+  return result;
 }
 
 const shortcutStyles: Record<string, React.CSSProperties> = {
@@ -240,54 +249,60 @@ const styles: Record<string, React.CSSProperties> = {
     overflowX: 'hidden',
   },
   content: {
-    maxWidth: 680,
+    maxWidth: 620,           /* tighter column — less wall-of-text */
     margin: '0 auto',
-    padding: '40px 48px 60px',
+    padding: '36px 40px 60px',
   },
   header: {
-    marginBottom: 32,
+    marginBottom: 28,
     borderBottom: '1px solid var(--border)',
-    paddingBottom: 24,
+    paddingBottom: 20,
   },
   feedMeta: {
     display: 'flex',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 12,
+    marginBottom: 10,
     fontSize: 12,
+    fontWeight: 500,
+    letterSpacing: '0.01em',
+    textTransform: 'uppercase' as const,
   },
   feedName: {
     color: 'var(--accent)',
-    fontWeight: 500,
+    fontWeight: 600,
   },
   dot: {
     color: 'var(--text-muted)',
+    fontWeight: 400,
+    textTransform: 'none' as const,
   },
   pubDate: {
     color: 'var(--text-secondary)',
+    fontWeight: 400,
+    textTransform: 'none' as const,
   },
   readTime: {
     color: 'var(--text-tertiary)',
+    fontWeight: 400,
+    textTransform: 'none' as const,
   },
   title: {
-    fontSize: 26,
+    fontSize: 28,             /* bigger, stronger title */
     fontFamily: 'var(--font-display)',
-    fontWeight: 700,
-    lineHeight: 1.25,
-    letterSpacing: '-0.02em',
+    fontWeight: 800,          /* heavier weight for hierarchy contrast */
+    lineHeight: 1.2,
+    letterSpacing: '-0.025em',
     color: 'var(--text-primary)',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   author: {
     fontSize: 13,
     color: 'var(--text-secondary)',
-    marginTop: 4,
+    marginTop: 6,
   },
   body: {
-    fontSize: 16,
-    lineHeight: 1.75,
-    color: 'var(--text-primary)',
-    fontFamily: 'var(--font-reading)',
+    // Typography handled by .article-body CSS class
   },
   actions: {
     display: 'flex',

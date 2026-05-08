@@ -1,5 +1,6 @@
 import { ScraperAdapter } from './types';
 import { uberScraper } from './uber';
+import { doordashScraper } from './doordash';
 
 /**
  * Registry of all scraper adapters.
@@ -8,6 +9,7 @@ import { uberScraper } from './uber';
  */
 const adapters: ScraperAdapter[] = [
   uberScraper,
+  doordashScraper,
 ];
 
 /** Returns the first adapter that claims this URL, or null. */

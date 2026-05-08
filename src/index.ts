@@ -3,12 +3,13 @@ import { updateElectronApp } from 'update-electron-app';
 import {
   initDb, listFeeds, addFeed, removeFeed, markFeedAllRead, updateFeedLastFetched,
   listArticles, getArticle, markArticleRead, toggleArticleStar,
-  updateScrollProgress, updateArticleContent, searchArticles, upsertArticles,
-  renameFeedFolder, updateFeedFolder, cleanupBadArticles,
+  updateScrollProgress, updateArticleContent, updateArticlePublishedAt,
+  searchArticles, upsertArticles, renameFeedFolder, updateFeedFolder, cleanupBadArticles,
+  updateFeedFavicon,
 } from './db';
-import { fetchFeed, discoverFeedUrl } from './fetcher';
+import { fetchFeed, discoverFeedUrl, fetchFaviconUrl } from './fetcher';
 import { scrapeWithBrowser } from './scrapers/browser';
-import { EXTRACT_ARTICLE_CONTENT_JS } from './scrapers/uber';
+import { EXTRACT_ARTICLE_CONTENT_JS, EXTRACT_DATE_JS } from './scrapers/uber';
 import { seedDefaultFeeds } from './seeds';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
@@ -97,6 +98,13 @@ ipcMain.handle('feeds:add', async (_, url: string, name: string, folder: string 
     upsertArticles(feed.id, parsed.articles);
     updateFeedLastFetched(feed.id);
   } catch {}
+  // Fetch favicon in background
+  fetchFaviconUrl(url).then(iconUrl => {
+    if (iconUrl) {
+      updateFeedFavicon(feed.id, iconUrl);
+      mainWindow?.webContents.send('feeds:updated', listFeeds());
+    }
+  }).catch(() => {});
   mainWindow?.webContents.send('feeds:updated', listFeeds());
   return listFeeds();
 });
@@ -125,11 +133,25 @@ ipcMain.handle('articles:get', (_, id: number) => getArticle(id));
 ipcMain.handle('articles:fetchContent', async (_, id: number) => {
   const article = getArticle(id);
   if (!article) return null;
-  if (article.content) return article.content; // already stored
+  if (article.content) {
+    // Content already stored — still try to backfill date if missing
+    if (!article.publishedAt) {
+      try {
+        const ts = await scrapeWithBrowser<number | null>(article.url, EXTRACT_DATE_JS, { waitMs: 2500 });
+        if (ts && !isNaN(ts)) updateArticlePublishedAt(id, ts);
+      } catch {}
+    }
+    return article.content;
+  }
 
   try {
-    const html = await scrapeWithBrowser<string>(article.url, EXTRACT_ARTICLE_CONTENT_JS, { waitMs: 2500 });
+    // Fetch content and date in parallel using the same page load
+    const [html, ts] = await Promise.all([
+      scrapeWithBrowser<string>(article.url, EXTRACT_ARTICLE_CONTENT_JS, { waitMs: 2500 }),
+      scrapeWithBrowser<number | null>(article.url, EXTRACT_DATE_JS, { waitMs: 2500 }),
+    ]);
     if (html) updateArticleContent(id, html);
+    if (ts && !isNaN(ts)) updateArticlePublishedAt(id, ts);
     return html;
   } catch (e) {
     console.error(`Failed to fetch content for article ${id}:`, e);
@@ -168,6 +190,19 @@ ipcMain.handle('refresh:feed', async (_, id: number) => {
 ipcMain.handle('shell:openExternal', (_, url: string) => shell.openExternal(url));
 
 app.on('ready', async () => {
+  // Strip Referer from outgoing image requests so hotlink protection doesn't block them
+  const { session } = await import('electron');
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    { urls: ['https://*/*', 'http://*/*'] },
+    (details, callback) => {
+      const headers = { ...details.requestHeaders };
+      if (details.resourceType === 'image') {
+        delete headers['Referer'];
+        delete headers['Origin'];
+      }
+      callback({ requestHeaders: headers });
+    }
+  );
   initDb();
   // Migrate existing folder names for users upgrading from older versions
   renameFeedFolder('Aggregators', 'News');
@@ -179,6 +214,22 @@ app.on('ready', async () => {
     mainWindow?.webContents.send('seed:progress', { name, done, total });
   });
   mainWindow?.webContents.send('feeds:updated', listFeeds());
+
+  // Backfill favicons for feeds that don't have one yet
+  const feedsNeedingFavicons = listFeeds().filter(f => !f.faviconUrl);
+  (async () => {
+    for (const feed of feedsNeedingFavicons) {
+      try {
+        const iconUrl = await fetchFaviconUrl(feed.url);
+        if (iconUrl) {
+          updateFeedFavicon(feed.id, iconUrl);
+        }
+      } catch {}
+    }
+    if (feedsNeedingFavicons.length > 0) {
+      mainWindow?.webContents.send('feeds:updated', listFeeds());
+    }
+  })();
 });
 
 app.on('window-all-closed', () => {

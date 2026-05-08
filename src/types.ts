@@ -6,6 +6,7 @@ export interface Feed {
   lastFetched: number | null;
   unreadCount: number;
   isStale: boolean;
+  faviconUrl: string | null;
 }
 
 export interface Article {

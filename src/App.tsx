@@ -7,6 +7,35 @@ import { ReadingPane } from './components/ReadingPane';
 import { AddFeedSheet } from './components/AddFeedSheet';
 import { SearchOverlay } from './components/SearchOverlay';
 
+function useResizeHandle(initialWidth: number, min: number, max: number) {
+  const [width, setWidth] = useState(initialWidth);
+  const dragging = useRef(false);
+  const startX = useRef(0);
+  const startWidth = useRef(0);
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    dragging.current = true;
+    startX.current = e.clientX;
+    startWidth.current = width;
+    e.preventDefault();
+
+    const onMove = (ev: MouseEvent) => {
+      if (!dragging.current) return;
+      const next = Math.min(max, Math.max(min, startWidth.current + ev.clientX - startX.current));
+      setWidth(next);
+    };
+    const onUp = () => {
+      dragging.current = false;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [width, min, max]);
+
+  return { width, onMouseDown };
+}
+
 export function App() {
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [selectedFeed, setSelectedFeed] = useState<SelectedFeed>('all');
@@ -19,6 +48,8 @@ export function App() {
   const [showSearch, setShowSearch] = useState(false);
   const [seedProgress, setSeedProgress] = useState<{ name: string; done: number; total: number } | null>(null);
   const noticeTimer = useRef<NodeJS.Timeout | null>(null);
+  const sidebar = useResizeHandle(220, 160, 360);
+  const articleList = useResizeHandle(300, 200, 560);
 
   useEffect(() => {
     window.rss.feeds.list().then(setFeeds);
@@ -171,7 +202,9 @@ export function App() {
           onRefreshAll={handleRefreshAll}
           isRefreshing={refreshProgress.isRefreshing}
           onMoveToFolder={handleMoveToFolder}
+          width={sidebar.width}
         />
+        <div style={styles.resizeHandle} onMouseDown={sidebar.onMouseDown} />
         <ArticleList
           articles={articles}
           selectedArticle={selectedArticle}
@@ -182,7 +215,9 @@ export function App() {
           onToggleUnreadOnly={handleToggleUnreadOnly}
           onDismissNotice={() => setNewArticleNotice(null)}
           onScrollToTop={() => loadArticles(selectedFeed)}
+          width={articleList.width}
         />
+        <div style={styles.resizeHandle} onMouseDown={articleList.onMouseDown} />
         <ReadingPane
           article={selectedArticle}
           onToggleStar={handleToggleStar}
@@ -234,6 +269,14 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flex: 1,
     overflow: 'hidden',
+  },
+  resizeHandle: {
+    width: 4,
+    flexShrink: 0,
+    cursor: 'col-resize',
+    background: 'var(--border)',
+    transition: 'background 150ms',
+    zIndex: 10,
   },
   seedBanner: {
     position: 'fixed',

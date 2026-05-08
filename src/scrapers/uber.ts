@@ -86,6 +86,27 @@ const EXTRACT_LIST_JS = `
 })()
 `;
 
+// JS run inside a loaded article page to extract the published date.
+export const EXTRACT_DATE_JS = `
+(() => {
+  // 1. JSON-LD datePublished
+  for (const el of document.querySelectorAll('script[type="application/ld+json"]')) {
+    try {
+      const data = JSON.parse(el.textContent);
+      const date = data.datePublished || data.dateCreated || (Array.isArray(data) && data[0]?.datePublished);
+      if (date) return new Date(date).getTime();
+    } catch {}
+  }
+  // 2. <meta property="article:published_time">
+  const metaPub = document.querySelector('meta[property="article:published_time"], meta[name="date"], meta[name="publish-date"]');
+  if (metaPub) return new Date(metaPub.getAttribute('content')).getTime();
+  // 3. <time datetime>
+  const time = document.querySelector('time[datetime]');
+  if (time) return new Date(time.getAttribute('datetime')).getTime();
+  return null;
+})()
+`;
+
 // JS run inside a loaded article page to extract its main content HTML.
 export const EXTRACT_ARTICLE_CONTENT_JS = `
 (() => {
@@ -125,7 +146,7 @@ export const uberScraper: ScraperAdapter = {
         title: item.title,
         url: item.url,
         author: item.author || null,
-        publishedAt: isNaN(publishedAt) ? Date.now() : publishedAt,
+        publishedAt: isNaN(publishedAt) ? 0 : publishedAt,
         content: item.summary || '',
         summary: item.summary ? item.summary.slice(0, 500) : null,
         readTimeMin: Math.max(1, Math.ceil(wordCount / 200)),

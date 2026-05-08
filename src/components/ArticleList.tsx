@@ -11,11 +11,12 @@ interface Props {
   onToggleUnreadOnly: () => void;
   onDismissNotice: () => void;
   onScrollToTop: () => void;
+  width: number;
 }
 
 export function ArticleList({
   articles, selectedArticle, unreadOnly, newArticleNotice,
-  onSelectArticle, onToggleStar, onToggleUnreadOnly, onDismissNotice, onScrollToTop,
+  onSelectArticle, onToggleStar, onToggleUnreadOnly, onDismissNotice, onScrollToTop, width,
 }: Props) {
   const listRef = useRef<HTMLDivElement>(null);
   const selectedIndex = selectedArticle
@@ -41,7 +42,7 @@ export function ArticleList({
   }, [selectedIndex, articles, selectedArticle]);
 
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, width, minWidth: width }}>
       {/* Filter bar */}
       <div style={styles.filterBar}>
         <span style={styles.filterLabel}>
@@ -160,6 +161,7 @@ function EmptyState({ unreadOnly, onToggleUnreadOnly }: {
 }
 
 function relativeTime(ms: number): string {
+  if (!ms) return 'Date unknown';
   const diff = Date.now() - ms;
   const min = Math.floor(diff / 60000);
   if (min < 1) return 'just now';
@@ -176,7 +178,7 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     width: 'var(--article-list-width)',
     minWidth: 'var(--article-list-width)',
-    borderRight: '1px solid var(--border)',
+    borderRight: 'none',
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
@@ -248,7 +250,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '10px 12px',
     gap: 8,
     border: 'none',
-    borderBottom: '1px solid var(--border)',
+    boxShadow: 'inset 0 -1px 0 var(--border)',
     background: 'none',
     cursor: 'pointer',
     textAlign: 'left',
@@ -257,7 +259,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   rowSelected: {
     background: 'var(--selection-bg)',
-    borderColor: 'transparent',
+    boxShadow: 'none',
   },
   unreadDot: {
     width: 7,
@@ -275,7 +277,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 3,
   },
   rowTitle: {
-    fontSize: 13,
+    fontSize: 14,
     lineHeight: 1.4,
     overflow: 'hidden',
     display: '-webkit-box',
@@ -286,7 +288,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 5,
-    fontSize: 11,
+    fontSize: 12,
   },
   starButton: {
     flexShrink: 0,

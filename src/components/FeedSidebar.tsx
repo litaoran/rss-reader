@@ -12,6 +12,7 @@ interface Props {
   onRefreshAll: () => void;
   isRefreshing: boolean;
   onMoveToFolder: (feedId: number, folder: string | null) => void;
+  width: number;
 }
 
 interface ContextMenu {
@@ -21,7 +22,7 @@ interface ContextMenu {
   y: number;
 }
 
-export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, onRemoveFeed, onAddFeed, onRefreshAll, isRefreshing, onMoveToFolder }: Props) {
+export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, onRemoveFeed, onAddFeed, onRefreshAll, isRefreshing, onMoveToFolder, width }: Props) {
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [dragOverFolder, setDragOverFolder] = useState<string | null | 'ungrouped'>(undefined as any);
   const dragFeedId = useRef<number | null>(null);
@@ -60,7 +61,7 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
   }, [onMoveToFolder]);
 
   return (
-    <div style={styles.sidebar} onClick={closeContextMenu}>
+    <div style={{ ...styles.sidebar, width, minWidth: width }} onClick={closeContextMenu}>
       {/* Action row */}
       <div style={styles.actionRow}>
         <button style={styles.addButton} onClick={onAddFeed} title="Add feed (⌘N)">
@@ -211,6 +212,14 @@ function TodayIcon() {
   );
 }
 
+function FolderIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1.5 3.5a1 1 0 0 1 1-1h3.586a1 1 0 0 1 .707.293L8.5 4.5h5a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-12a1 1 0 0 1-1-1z" />
+    </svg>
+  );
+}
+
 // ─── Row Components ───────────────────────────────────────────────────────────
 
 function SmartRow({ icon, label, count, isSelected, onClick, hideCount }: {
@@ -234,25 +243,46 @@ function SmartRow({ icon, label, count, isSelected, onClick, hideCount }: {
   );
 }
 
-function FeedRow({ feed, isSelected, onClick, onContextMenu, onDragStart }: {
+function FeedFavicon({ faviconUrl, name, isStale }: { faviconUrl: string | null; name: string; isStale: boolean }) {
+  const [failed, setFailed] = useState(false);
+  const letter = name.charAt(0).toUpperCase();
+
+  return (
+    <span style={styles.faviconSlot}>
+      {!failed && faviconUrl ? (
+        <img
+          src={faviconUrl}
+          style={styles.favicon}
+          alt=""
+          referrerPolicy="no-referrer"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <span style={styles.faviconFallback}>{letter}</span>
+      )}
+      {isStale && <span style={styles.staleIndicator} title="Feed hasn't updated in 7+ days" />}
+    </span>
+  );
+}
+
+function FeedRow({ feed, isSelected, onClick, onContextMenu, onDragStart, indented }: {
   feed: Feed;
   isSelected: boolean;
   onClick: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
   onDragStart?: () => void;
+  indented?: boolean;
 }) {
   return (
     <button
       draggable
-      style={{ ...styles.row, ...(isSelected ? styles.rowSelected : {}) }}
+      style={{ ...styles.row, ...(isSelected ? styles.rowSelected : {}), ...(indented ? { paddingLeft: 18 } : {}) }}
       onClick={onClick}
       onContextMenu={onContextMenu}
       onDragStart={onDragStart}
       title={feed.url}
     >
-      <span style={styles.iconSlot}>
-        {feed.isStale && <span style={styles.staleIndicator} title="Feed hasn't updated in 7+ days" />}
-      </span>
+      <FeedFavicon faviconUrl={feed.faviconUrl} name={feed.name} isStale={feed.isStale} />
       <span style={styles.feedName}>{feed.name}</span>
       {feed.unreadCount > 0 && (
         <span style={{ ...styles.badge, ...(isSelected ? styles.badgeSelected : {}) }}>
@@ -286,6 +316,7 @@ function FolderGroup({ name, feeds, selectedFeed, onSelectFeed, onContextMenu, i
     >
       <div style={styles.folderHeader} onClick={() => setCollapsed(!collapsed)}>
         <span style={{ ...styles.folderChevron, transform: collapsed ? 'none' : 'rotate(90deg)' }}>›</span>
+        <FolderIcon />
         <span style={styles.folderName}>{name}</span>
       </div>
       {!collapsed && feeds.map(feed => (
@@ -296,6 +327,7 @@ function FolderGroup({ name, feeds, selectedFeed, onSelectFeed, onContextMenu, i
           onClick={() => onSelectFeed(feed.id)}
           onContextMenu={(e) => onContextMenu(e, feed.id, feed.url)}
           onDragStart={() => onFeedDragStart(feed.id)}
+          indented
         />
       ))}
     </div>
@@ -393,7 +425,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'var(--bg-sidebar)',
     backdropFilter: 'saturate(180%) blur(20px)',
     WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-    borderRight: '1px solid var(--border)',
+    borderRight: 'none',
     overflowY: 'auto',
     display: 'flex',
     flexDirection: 'column',
@@ -499,24 +531,53 @@ const styles: Record<string, React.CSSProperties> = {
   badgeSelected: {
     color: 'var(--selection-badge)',
   },
+  faviconSlot: {
+    position: 'relative',
+    width: 16,
+    height: 16,
+    flexShrink: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  favicon: {
+    width: 16,
+    height: 16,
+    borderRadius: 3,
+  },
+  faviconFallback: {
+    width: 16,
+    height: 16,
+    borderRadius: 3,
+    background: 'var(--bg-tertiary)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 10,
+    fontWeight: 600,
+    color: 'var(--text-secondary)',
+  },
   staleIndicator: {
-    width: 5,
-    height: 5,
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 6,
+    height: 6,
     borderRadius: '50%',
     background: '#ff3b30',
-    display: 'inline-block',
+    border: '1.5px solid var(--bg-sidebar)',
   },
   // Folder section label — NOT a button-style row
   folderHeader: {
     display: 'flex',
     alignItems: 'center',
     gap: 4,
-    padding: '12px 6px 3px 6px',
+    padding: '14px 6px 4px 6px',
     cursor: 'pointer',
-    color: 'var(--text-tertiary)',
+    color: 'var(--text-primary)',
     fontSize: 11,
     fontWeight: 600,
-    letterSpacing: '0.05em',
+    letterSpacing: '0.06em',
     textTransform: 'uppercase',
     userSelect: 'none',
   } as any,

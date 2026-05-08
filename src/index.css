@@ -86,8 +86,16 @@ body {
   line-height: 1.5;
   color: var(--text-primary);
   background: var(--bg-primary);
-  -webkit-font-smoothing: antialiased;
+  -webkit-font-smoothing: auto;
   user-select: none;
+}
+
+/* Retina screens have enough pixels for grayscale-only antialiasing to look crisp.
+   Standard-DPI monitors need subpixel rendering (auto) to avoid wispy text. */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 2dppx) {
+  body {
+    -webkit-font-smoothing: antialiased;
+  }
 }
 
 button {
@@ -118,6 +126,132 @@ input {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-tertiary);
+}
+
+/* Article body typography — tuned to match NetNewsWire's reading comfort */
+.article-body {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 400;
+  word-break: break-word;
+  user-select: text;
+  /* Font smoothing is set per-display on body via media query */
+}
+
+.article-body p {
+  margin: 0 0 1.4em;
+}
+
+.article-body h1,
+.article-body h2,
+.article-body h3,
+.article-body h4,
+.article-body h5 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text-primary);
+  margin: 1.8em 0 0.5em;
+}
+
+.article-body h1 { font-size: 1.45em; letter-spacing: -0.01em; }
+.article-body h2 { font-size: 1.2em;  letter-spacing: -0.01em; }
+.article-body h3 { font-size: 1.05em; }
+.article-body h4 { font-size: 1em; }
+
+.article-body img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1.5em auto;
+  border-radius: 6px;
+}
+
+.article-body a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.article-body a:hover {
+  text-decoration: underline;
+}
+
+.article-body ul,
+.article-body ol {
+  margin: 0 0 1.25em 1.5em;
+  padding: 0;
+}
+
+.article-body li {
+  margin-bottom: 0.4em;
+}
+
+.article-body blockquote {
+  margin: 1.5em 0;
+  padding: 0.75em 1.25em;
+  border-left: 3px solid var(--accent);
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.article-body pre,
+.article-body code {
+  font-family: "SF Mono", "Fira Code", "Menlo", monospace;
+  font-size: 0.88em;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+.article-body pre {
+  padding: 1em 1.25em;
+  overflow-x: auto;
+  margin: 1.25em 0;
+}
+
+.article-body code {
+  padding: 0.15em 0.35em;
+}
+
+.article-body pre code {
+  background: none;
+  padding: 0;
+}
+
+.article-body hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2em 0;
+}
+
+.article-body figure {
+  margin: 1.5em 0;
+}
+
+.article-body figcaption {
+  font-size: 0.85em;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-top: 0.5em;
+}
+
+.article-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.25em 0;
+  font-size: 0.9em;
+}
+
+.article-body th,
+.article-body td {
+  padding: 0.5em 0.75em;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+
+.article-body th {
+  background: var(--bg-secondary);
+  font-weight: 600;
 }
 
 /* Keyboard hint */

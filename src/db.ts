@@ -30,7 +30,8 @@ function migrate(db: Database.Database) {
       name TEXT NOT NULL,
       folder TEXT,
       lastFetched INTEGER,
-      isActive INTEGER NOT NULL DEFAULT 1
+      isActive INTEGER NOT NULL DEFAULT 1,
+      faviconUrl TEXT
     );
 
     CREATE TABLE IF NOT EXISTS articles (
@@ -67,6 +68,13 @@ function migrate(db: Database.Database) {
         VALUES('delete', old.id, old.title, old.summary, old.content);
     END;
   `);
+
+  // Add faviconUrl column if it doesn't exist (migration for existing DBs)
+  try {
+    db.exec('ALTER TABLE feeds ADD COLUMN faviconUrl TEXT');
+  } catch {
+    // Column already exists
+  }
 }
 
 export function listFeeds(): Feed[] {
@@ -89,7 +97,12 @@ export function listFeeds(): Feed[] {
     lastFetched: r.lastFetched || null,
     unreadCount: r.unreadCount,
     isStale: Boolean(r.isStale),
+    faviconUrl: r.faviconUrl || null,
   }));
+}
+
+export function updateFeedFavicon(id: number, faviconUrl: string) {
+  getDb().prepare('UPDATE feeds SET faviconUrl = ? WHERE id = ?').run(faviconUrl, id);
 }
 
 export function addFeed(url: string, name: string, folder: string | null): Feed {
@@ -99,12 +112,12 @@ export function addFeed(url: string, name: string, folder: string | null): Feed 
   if (existing) {
     db.prepare('UPDATE feeds SET name = ?, folder = ?, isActive = 1 WHERE id = ?')
       .run(name, folder, existing.id);
-    return { id: existing.id, url, name, folder, lastFetched: null, unreadCount: 0, isStale: false };
+    return { id: existing.id, url, name, folder, lastFetched: null, unreadCount: 0, isStale: false, faviconUrl: null };
   }
   const { lastInsertRowid: id } = db.prepare(
     'INSERT INTO feeds (url, name, folder) VALUES (?, ?, ?)'
   ).run(url, name, folder);
-  return { id: id as number, url, name, folder, lastFetched: null, unreadCount: 0, isStale: false };
+  return { id: id as number, url, name, folder, lastFetched: null, unreadCount: 0, isStale: false, faviconUrl: null };
 }
 
 export function removeFeed(id: number) {
@@ -168,7 +181,7 @@ export function listArticles(opts: ArticleListOptions): Article[] {
     SELECT a.*, f.name as feedName
     FROM articles a JOIN feeds f ON f.id = a.feedId
     ${where}
-    ORDER BY a.publishedAt DESC
+    ORDER BY CASE WHEN a.publishedAt = 0 THEN a.fetchedAt ELSE a.publishedAt END DESC
     LIMIT ? OFFSET ?
   `).all(...params, opts.limit, opts.offset) as any[]).map(rowToArticle);
 }
@@ -196,6 +209,10 @@ export function updateScrollProgress(id: number, progress: number) {
 
 export function updateArticleContent(id: number, content: string) {
   getDb().prepare('UPDATE articles SET content = ? WHERE id = ?').run(content, id);
+}
+
+export function updateArticlePublishedAt(id: number, publishedAt: number) {
+  getDb().prepare('UPDATE articles SET publishedAt = ? WHERE id = ? AND publishedAt = 0').run(publishedAt, id);
 }
 
 export function searchArticles(query: string): Article[] {
@@ -249,4 +266,15 @@ export function cleanupBadArticles(): void {
   getDb().prepare(
     `DELETE FROM articles WHERE url LIKE '%uber.com%/blog/engineering/%'`
   ).run();
+
+  // Scraped articles whose publishedAt was set to Date.now() as a fallback
+  // (i.e. within 60 seconds of fetchedAt) should be reset to 0 so the UI
+  // shows "Date unknown" instead of a misleading recent timestamp.
+  getDb().prepare(`
+    UPDATE articles
+    SET publishedAt = 0
+    WHERE publishedAt != 0
+      AND ABS(publishedAt - fetchedAt) < 60000
+      AND (url LIKE '%uber.com%' OR url LIKE '%careersatdoordash.com%')
+  `).run();
 }
