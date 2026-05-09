@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('rss', {
   },
   app: {
     relaunch: () => ipcRenderer.invoke('app:relaunch'),
+    getVersion: () => ipcRenderer.invoke('app:version'),
   },
   on: (channel: string, fn: (...args: any[]) => void) => {
     ipcRenderer.on(channel, (_, ...args) => fn(...args));

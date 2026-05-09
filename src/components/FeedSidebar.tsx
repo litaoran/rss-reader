@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Feed, SelectedFeed } from '../types';
 
@@ -27,8 +27,13 @@ interface ContextMenu {
 export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, onRemoveFeed, onAddFeed, onRefreshAll, isRefreshing, onMoveToFolder, width, updateReady, onRelaunch }: Props) {
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [dragOverFolder, setDragOverFolder] = useState<string | null | 'ungrouped'>(undefined as any);
+  const [appVersion, setAppVersion] = useState('');
   const dragFeedId = useRef<number | null>(null);
   const totalUnread = feeds.reduce((sum, f) => sum + f.unreadCount, 0);
+
+  useEffect(() => {
+    window.rss.app.getVersion().then(setAppVersion);
+  }, []);
 
   // Group feeds by folder
   const grouped = new Map<string, Feed[]>();
@@ -166,13 +171,15 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
         </div>
       )}
 
-      {updateReady && (
+      {updateReady ? (
         <div style={styles.updateBanner}>
           <span style={styles.updateText}>Update available</span>
           <button style={styles.updateButton} onClick={onRelaunch}>
             Relaunch
           </button>
         </div>
+      ) : (
+        <div style={styles.versionLabel}>v{appVersion}</div>
       )}
 
       {contextMenu && (
@@ -617,6 +624,14 @@ const styles: Record<string, React.CSSProperties> = {
   emptyIcon: { fontSize: 28 },
   emptyText: { fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)' },
   emptyHint: { fontSize: 12, color: 'var(--text-tertiary)' },
+  versionLabel: {
+    marginTop: 'auto',
+    flexShrink: 0,
+    padding: '8px 12px',
+    fontSize: 10,
+    color: 'var(--text-muted)',
+    borderTop: '1px solid var(--border)',
+  },
   updateBanner: {
     marginTop: 'auto',
     flexShrink: 0,

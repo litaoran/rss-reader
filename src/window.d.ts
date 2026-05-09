@@ -33,6 +33,7 @@ interface RssApi {
   };
   app: {
     relaunch: () => Promise<void>;
+    getVersion: () => Promise<string>;
   };
   on: (channel: string, fn: (...args: any[]) => void) => void;
   off: (channel: string, fn: (...args: any[]) => void) => void;

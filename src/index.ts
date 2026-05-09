@@ -198,6 +198,8 @@ ipcMain.handle('app:relaunch', () => {
   autoUpdater.quitAndInstall();
 });
 
+ipcMain.handle('app:version', () => app.getVersion());
+
 app.on('ready', async () => {
   // Strip Referer from outgoing image requests so hotlink protection doesn't block them
   const { session } = await import('electron');
