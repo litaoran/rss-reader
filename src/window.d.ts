@@ -31,6 +31,9 @@ interface RssApi {
   shell: {
     openExternal: (url: string) => Promise<void>;
   };
+  app: {
+    relaunch: () => Promise<void>;
+  };
   on: (channel: string, fn: (...args: any[]) => void) => void;
   off: (channel: string, fn: (...args: any[]) => void) => void;
 }

@@ -48,6 +48,7 @@ export function App() {
   const [showAddFeed, setShowAddFeed] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [seedProgress, setSeedProgress] = useState<{ name: string; done: number; total: number } | null>(null);
+  const [updateReady, setUpdateReady] = useState(false);
   const noticeTimer = useRef<NodeJS.Timeout | null>(null);
   const sidebar = useResizeHandle(220, 160, 360);
   const articleList = useResizeHandle(300, 200, 560);
@@ -76,17 +77,21 @@ export function App() {
       loadArticles('all', true);
     };
 
+    const onUpdateReady = () => setUpdateReady(true);
+
     window.rss.on('feeds:updated', onFeedsUpdated);
     window.rss.on('feeds:updated', onFeedsUpdatedAfterSeed);
     window.rss.on('refresh:progress', onRefreshProgress);
     window.rss.on('articles:new', onArticlesNew);
     window.rss.on('seed:progress', onSeedProgress);
+    window.rss.on('update:ready', onUpdateReady);
     return () => {
       window.rss.off('feeds:updated', onFeedsUpdated);
       window.rss.off('feeds:updated', onFeedsUpdatedAfterSeed);
       window.rss.off('refresh:progress', onRefreshProgress);
       window.rss.off('articles:new', onArticlesNew);
       window.rss.off('seed:progress', onSeedProgress);
+      window.rss.off('update:ready', onUpdateReady);
     };
   }, []);
 
@@ -210,6 +215,8 @@ export function App() {
           isRefreshing={refreshProgress.isRefreshing}
           onMoveToFolder={handleMoveToFolder}
           width={sidebar.width}
+          updateReady={updateReady}
+          onRelaunch={() => window.rss.app.relaunch()}
         />
         <div style={styles.resizeHandle} onMouseDown={sidebar.onMouseDown} />
         <ArticleList

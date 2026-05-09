@@ -13,6 +13,8 @@ interface Props {
   isRefreshing: boolean;
   onMoveToFolder: (feedId: number, folder: string | null) => void;
   width: number;
+  updateReady: boolean;
+  onRelaunch: () => void;
 }
 
 interface ContextMenu {
@@ -22,7 +24,7 @@ interface ContextMenu {
   y: number;
 }
 
-export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, onRemoveFeed, onAddFeed, onRefreshAll, isRefreshing, onMoveToFolder, width }: Props) {
+export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, onRemoveFeed, onAddFeed, onRefreshAll, isRefreshing, onMoveToFolder, width, updateReady, onRelaunch }: Props) {
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [dragOverFolder, setDragOverFolder] = useState<string | null | 'ungrouped'>(undefined as any);
   const dragFeedId = useRef<number | null>(null);
@@ -161,6 +163,15 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
           <div style={styles.emptyIcon}>📡</div>
           <div style={styles.emptyText}>No feeds yet</div>
           <div style={styles.emptyHint}>Press <kbd>⌘N</kbd> to add one</div>
+        </div>
+      )}
+
+      {updateReady && (
+        <div style={styles.updateBanner}>
+          <span style={styles.updateText}>Update available</span>
+          <button style={styles.updateButton} onClick={onRelaunch}>
+            Relaunch
+          </button>
         </div>
       )}
 
@@ -606,6 +617,32 @@ const styles: Record<string, React.CSSProperties> = {
   emptyIcon: { fontSize: 28 },
   emptyText: { fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)' },
   emptyHint: { fontSize: 12, color: 'var(--text-tertiary)' },
+  updateBanner: {
+    marginTop: 'auto',
+    flexShrink: 0,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '8px 12px',
+    borderTop: '1px solid var(--border)',
+  },
+  updateText: {
+    flex: 1,
+    fontSize: 11,
+    color: 'var(--text-secondary)',
+    fontWeight: 500,
+  },
+  updateButton: {
+    fontSize: 11,
+    fontWeight: 600,
+    padding: '4px 10px',
+    borderRadius: 5,
+    border: 'none',
+    background: 'var(--accent)',
+    color: '#fff',
+    cursor: 'pointer',
+    fontFamily: 'var(--font-ui)',
+  },
   dropTarget: {
     borderRadius: 6,
     outline: '2px solid var(--accent)',

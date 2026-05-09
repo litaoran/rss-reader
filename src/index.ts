@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, autoUpdater, BrowserWindow, ipcMain, shell } from 'electron';
 import { updateElectronApp } from 'update-electron-app';
 import {
   initDb, listFeeds, addFeed, removeFeed, markFeedAllRead, updateFeedLastFetched,
@@ -23,6 +23,11 @@ if (require('electron-squirrel-startup')) app.quit();
 app.commandLine.appendSwitch('password-store', 'basic');
 
 updateElectronApp({ repo: 'litaoran/rss-reader' });
+
+// Notify renderer when an update has been downloaded and is ready to install
+autoUpdater.on('update-downloaded', () => {
+  mainWindow?.webContents.send('update:ready');
+});
 
 let mainWindow: BrowserWindow | null = null;
 let refreshTimer: NodeJS.Timeout | null = null;
@@ -188,6 +193,10 @@ ipcMain.handle('refresh:feed', async (_, id: number) => {
 });
 
 ipcMain.handle('shell:openExternal', (_, url: string) => shell.openExternal(url));
+
+ipcMain.handle('app:relaunch', () => {
+  autoUpdater.quitAndInstall();
+});
 
 app.on('ready', async () => {
   // Strip Referer from outgoing image requests so hotlink protection doesn't block them

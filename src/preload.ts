@@ -29,6 +29,9 @@ contextBridge.exposeInMainWorld('rss', {
   shell: {
     openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
   },
+  app: {
+    relaunch: () => ipcRenderer.invoke('app:relaunch'),
+  },
   on: (channel: string, fn: (...args: any[]) => void) => {
     ipcRenderer.on(channel, (_, ...args) => fn(...args));
   },
