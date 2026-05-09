@@ -42,6 +42,7 @@ export function App() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<ArticleWithContent | null>(null);
   const [unreadOnly, setUnreadOnly] = useState(true);
+  const unreadPrefs = useRef<Record<string, boolean>>({});
   const [refreshProgress, setRefreshProgress] = useState<RefreshProgress>({ isRefreshing: false });
   const [newArticleNotice, setNewArticleNotice] = useState<{ count: number } | null>(null);
   const [showAddFeed, setShowAddFeed] = useState(false);
@@ -117,9 +118,14 @@ export function App() {
   }
 
   const handleSelectFeed = useCallback((feed: SelectedFeed) => {
+    // Save current feed's unread pref before switching
+    unreadPrefs.current[String(selectedFeed)] = unreadOnly;
+    // Restore the target feed's pref (default: true)
+    const restored = unreadPrefs.current[String(feed)] ?? true;
+    setUnreadOnly(restored);
     setSelectedFeed(feed);
-    loadArticles(feed);
-  }, [unreadOnly]);
+    loadArticles(feed, restored);
+  }, [unreadOnly, selectedFeed]);
 
   const handleSelectArticle = useCallback(async (article: Article) => {
     const full = await window.rss.articles.get(article.id);
@@ -158,6 +164,7 @@ export function App() {
   const handleToggleUnreadOnly = useCallback(() => {
     const next = !unreadOnly;
     setUnreadOnly(next);
+    unreadPrefs.current[String(selectedFeed)] = next;
     loadArticles(selectedFeed, next);
   }, [unreadOnly, selectedFeed]);
 

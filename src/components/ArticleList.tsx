@@ -45,14 +45,12 @@ export function ArticleList({
     <div style={{ ...styles.container, width, minWidth: width }}>
       {/* Filter bar */}
       <div style={styles.filterBar}>
-        <span style={styles.filterLabel}>
-          {articles.length} {unreadOnly ? 'unread' : 'articles'}
-        </span>
-        <button
-          style={{ ...styles.filterToggle, ...(unreadOnly ? styles.filterToggleActive : {}) }}
-          onClick={onToggleUnreadOnly}
-        >
-          Unread only
+        <span style={{ flex: 1 }} />
+        <button style={styles.toggleRow} onClick={onToggleUnreadOnly}>
+          <span style={styles.toggleLabel}>Unread</span>
+          <span style={{ ...styles.toggleTrack, ...(unreadOnly ? styles.toggleTrackOn : {}) }}>
+            <span style={{ ...styles.toggleKnob, ...(unreadOnly ? styles.toggleKnobOn : {}) }} />
+          </span>
         </button>
       </div>
 
@@ -198,20 +196,46 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--text-tertiary)',
     fontWeight: 500,
   },
-  filterToggle: {
-    fontSize: 11,
-    padding: '3px 8px',
-    borderRadius: 12,
-    border: '1px solid var(--border-strong)',
-    color: 'var(--text-secondary)',
+  toggleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
     background: 'none',
+    border: 'none',
     cursor: 'pointer',
-    transition: 'all 150ms',
+    padding: 0,
   },
-  filterToggleActive: {
-    background: 'var(--accent-subtle)',
-    borderColor: 'var(--accent)',
-    color: 'var(--accent)',
+  toggleLabel: {
+    fontSize: 11,
+    color: 'var(--text-tertiary)',
+    fontWeight: 500,
+    fontFamily: 'var(--font-ui)',
+  },
+  toggleTrack: {
+    width: 28,
+    height: 16,
+    borderRadius: 8,
+    background: 'var(--bg-tertiary)',
+    position: 'relative',
+    transition: 'background 200ms',
+    flexShrink: 0,
+  } as React.CSSProperties,
+  toggleTrackOn: {
+    background: 'var(--accent)',
+  },
+  toggleKnob: {
+    position: 'absolute',
+    top: 2,
+    left: 2,
+    width: 12,
+    height: 12,
+    borderRadius: '50%',
+    background: '#fff',
+    transition: 'left 200ms',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+  } as React.CSSProperties,
+  toggleKnobOn: {
+    left: 14,
   },
   newPill: {
     position: 'absolute',
