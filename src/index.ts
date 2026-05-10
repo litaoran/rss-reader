@@ -22,7 +22,7 @@ if (require('electron-squirrel-startup')) app.quit();
 // avoids the "Antenna Safe Storage" Keychain prompt on every launch.
 app.commandLine.appendSwitch('password-store', 'basic');
 
-updateElectronApp({ repo: 'litaoran/rss-reader' });
+updateElectronApp({ repo: 'litaoran/rss-reader', notifyUser: false });
 
 // Notify renderer when an update has been downloaded and is ready to install
 autoUpdater.on('update-downloaded', () => {
