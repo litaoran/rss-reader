@@ -197,6 +197,10 @@ export function App() {
     await window.rss.feeds.updateFolder(feedId, folder);
   }, []);
 
+  const handleReorderFolders = useCallback(async (folders: string[]) => {
+    await window.rss.feeds.reorderFolders(folders);
+  }, []);
+
   return (
     <div style={styles.app}>
       <TopBar
@@ -214,6 +218,7 @@ export function App() {
           onRefreshAll={handleRefreshAll}
           isRefreshing={refreshProgress.isRefreshing}
           onMoveToFolder={handleMoveToFolder}
+          onReorderFolders={handleReorderFolders}
           width={sidebar.width}
           updateReady={updateReady}
           onRelaunch={() => window.rss.app.relaunch()}

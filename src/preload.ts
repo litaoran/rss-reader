@@ -10,6 +10,9 @@ contextBridge.exposeInMainWorld('rss', {
     updateFolder: (id: number, folder: string | null) =>
       ipcRenderer.invoke('feeds:updateFolder', id, folder),
     markAllRead: (id: number) => ipcRenderer.invoke('feeds:markAllRead', id),
+    rename: (id: number, name: string) => ipcRenderer.invoke('feeds:rename', id, name),
+    renameFolder: (oldName: string, newName: string) => ipcRenderer.invoke('feeds:renameFolder', oldName, newName),
+    reorderFolders: (folders: string[]) => ipcRenderer.invoke('feeds:reorderFolders', folders),
   },
   articles: {
     list: (feedId: number | null, options: object) =>

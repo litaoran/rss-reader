@@ -12,23 +12,33 @@ interface Props {
   onRefreshAll: () => void;
   isRefreshing: boolean;
   onMoveToFolder: (feedId: number, folder: string | null) => void;
+  onReorderFolders: (folders: string[]) => void;
   width: number;
   updateReady: boolean;
   onRelaunch: () => void;
 }
 
-interface ContextMenu {
+type ContextMenu = {
+  type: 'feed';
   feedId: number;
   feedUrl: string;
+  feedName: string;
+  x: number;
+  y: number;
+} | {
+  type: 'folder';
+  folderName: string;
   x: number;
   y: number;
 }
 
-export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, onRemoveFeed, onAddFeed, onRefreshAll, isRefreshing, onMoveToFolder, width, updateReady, onRelaunch }: Props) {
+export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, onRemoveFeed, onAddFeed, onRefreshAll, isRefreshing, onMoveToFolder, onReorderFolders, width, updateReady, onRelaunch }: Props) {
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [dragOverFolder, setDragOverFolder] = useState<string | null | 'ungrouped'>(undefined as any);
+  const [dragOverFolderTarget, setDragOverFolderTarget] = useState<string | null>(null);
   const [appVersion, setAppVersion] = useState('');
   const dragFeedId = useRef<number | null>(null);
+  const dragFolderName = useRef<string | null>(null);
   const totalUnread = feeds.reduce((sum, f) => sum + f.unreadCount, 0);
 
   useEffect(() => {
@@ -48,15 +58,26 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
     }
   }
 
-  const handleContextMenu = useCallback((e: React.MouseEvent, feedId: number, feedUrl: string) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, feedId: number, feedUrl: string, feedName: string) => {
     e.preventDefault();
-    setContextMenu({ feedId, feedUrl, x: e.clientX, y: e.clientY });
+    setContextMenu({ type: 'feed', feedId, feedUrl, feedName, x: e.clientX, y: e.clientY });
+  }, []);
+
+  const handleFolderContextMenu = useCallback((e: React.MouseEvent, folderName: string) => {
+    e.preventDefault();
+    setContextMenu({ type: 'folder', folderName, x: e.clientX, y: e.clientY });
   }, []);
 
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
 
   const handleDragStart = useCallback((feedId: number) => {
     dragFeedId.current = feedId;
+    dragFolderName.current = null;
+  }, []);
+
+  const handleFolderDragStart = useCallback((folderName: string) => {
+    dragFolderName.current = folderName;
+    dragFeedId.current = null;
   }, []);
 
   const handleDrop = useCallback((folder: string | null) => {
@@ -67,8 +88,24 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
     setDragOverFolder(undefined as any);
   }, [onMoveToFolder]);
 
+  const handleFolderDrop = useCallback((targetFolder: string) => {
+    if (dragFolderName.current && dragFolderName.current !== targetFolder) {
+      const folderNames = Array.from(grouped.keys());
+      const fromIdx = folderNames.indexOf(dragFolderName.current);
+      const toIdx = folderNames.indexOf(targetFolder);
+      if (fromIdx !== -1 && toIdx !== -1) {
+        const reordered = [...folderNames];
+        reordered.splice(fromIdx, 1);
+        reordered.splice(toIdx, 0, dragFolderName.current);
+        onReorderFolders(reordered);
+      }
+      dragFolderName.current = null;
+    }
+    setDragOverFolderTarget(null);
+  }, [grouped, onReorderFolders]);
+
   return (
-    <div style={{ ...styles.sidebar, width, minWidth: width }} onClick={closeContextMenu}>
+    <div style={{ ...styles.sidebar, width, minWidth: width }}>
       {/* Action row */}
       <div style={styles.actionRow}>
         <button style={styles.addButton} onClick={onAddFeed} title="Add feed (⌘N)">
@@ -139,7 +176,7 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
               feed={feed}
               isSelected={selectedFeed === feed.id}
               onClick={() => onSelectFeed(feed.id)}
-              onContextMenu={(e) => handleContextMenu(e, feed.id, feed.url)}
+              onContextMenu={(e) => handleContextMenu(e, feed.id, feed.url, feed.name)}
               onDragStart={() => handleDragStart(feed.id)}
             />
           ))}
@@ -155,11 +192,16 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
           selectedFeed={selectedFeed}
           onSelectFeed={onSelectFeed}
           onContextMenu={handleContextMenu}
+          onFolderContextMenu={handleFolderContextMenu}
           isDragOver={dragOverFolder === folder}
+          isFolderDragOver={dragOverFolderTarget === folder}
           onDragOver={() => setDragOverFolder(folder)}
-          onDragLeave={() => setDragOverFolder(undefined as any)}
+          onDragLeave={() => { setDragOverFolder(undefined as any); setDragOverFolderTarget(null); }}
           onDrop={() => handleDrop(folder)}
           onFeedDragStart={handleDragStart}
+          onFolderDragStart={() => handleFolderDragStart(folder)}
+          onFolderDragOver={() => setDragOverFolderTarget(folder)}
+          onFolderDrop={() => handleFolderDrop(folder)}
         />
       ))}
 
@@ -182,17 +224,26 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
         <div style={styles.versionLabel}>v{appVersion}</div>
       )}
 
-      {contextMenu && (
+      {contextMenu?.type === 'feed' && (
         <FeedContextMenu
           feedId={contextMenu.feedId}
           feedUrl={contextMenu.feedUrl}
+          feedName={contextMenu.feedName}
           x={contextMenu.x}
           y={contextMenu.y}
-          folders={Array.from(grouped.keys())}
           onMarkAllRead={() => { onMarkAllRead(contextMenu.feedId); closeContextMenu(); }}
           onRemove={() => { onRemoveFeed(contextMenu.feedId); closeContextMenu(); }}
           onOpenUrl={() => { window.rss.shell.openExternal(contextMenu.feedUrl); closeContextMenu(); }}
-          onMoveToFolder={(folder) => { onMoveToFolder(contextMenu.feedId, folder); closeContextMenu(); }}
+          onRename={(name) => { window.rss.feeds.rename(contextMenu.feedId, name); closeContextMenu(); }}
+          onClose={closeContextMenu}
+        />
+      )}
+      {contextMenu?.type === 'folder' && (
+        <FolderContextMenu
+          folderName={contextMenu.folderName}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onRename={(newName) => { window.rss.feeds.renameFolder(contextMenu.folderName, newName); closeContextMenu(); }}
           onClose={closeContextMenu}
         />
       )}
@@ -311,17 +362,22 @@ function FeedRow({ feed, isSelected, onClick, onContextMenu, onDragStart, indent
   );
 }
 
-function FolderGroup({ name, feeds, selectedFeed, onSelectFeed, onContextMenu, isDragOver, onDragOver, onDragLeave, onDrop, onFeedDragStart }: {
+function FolderGroup({ name, feeds, selectedFeed, onSelectFeed, onContextMenu, onFolderContextMenu, isDragOver, isFolderDragOver, onDragOver, onDragLeave, onDrop, onFeedDragStart, onFolderDragStart, onFolderDragOver, onFolderDrop }: {
   name: string;
   feeds: Feed[];
   selectedFeed: SelectedFeed;
   onSelectFeed: (feed: SelectedFeed) => void;
-  onContextMenu: (e: React.MouseEvent, feedId: number, feedUrl: string) => void;
+  onContextMenu: (e: React.MouseEvent, feedId: number, feedUrl: string, feedName: string) => void;
+  onFolderContextMenu: (e: React.MouseEvent, folderName: string) => void;
   isDragOver: boolean;
+  isFolderDragOver: boolean;
   onDragOver: () => void;
   onDragLeave: () => void;
   onDrop: () => void;
   onFeedDragStart: (feedId: number) => void;
+  onFolderDragStart: () => void;
+  onFolderDragOver: () => void;
+  onFolderDrop: () => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -332,7 +388,15 @@ function FolderGroup({ name, feeds, selectedFeed, onSelectFeed, onContextMenu, i
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      <div style={styles.folderHeader} onClick={() => setCollapsed(!collapsed)}>
+      <div
+        draggable
+        style={{ ...styles.folderHeader, ...(isFolderDragOver ? styles.folderDropTarget : {}) }}
+        onClick={() => setCollapsed(!collapsed)}
+        onDragStart={(e) => { e.stopPropagation(); onFolderDragStart(); }}
+        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); onFolderDragOver(); }}
+        onDrop={(e) => { e.preventDefault(); e.stopPropagation(); onFolderDrop(); }}
+        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onFolderContextMenu(e, name); }}
+      >
         <span style={{ ...styles.folderChevron, transform: collapsed ? 'none' : 'rotate(90deg)' }}>›</span>
         <FolderIcon />
         <span style={styles.folderName}>{name}</span>
@@ -343,7 +407,7 @@ function FolderGroup({ name, feeds, selectedFeed, onSelectFeed, onContextMenu, i
           feed={feed}
           isSelected={selectedFeed === feed.id}
           onClick={() => onSelectFeed(feed.id)}
-          onContextMenu={(e) => onContextMenu(e, feed.id, feed.url)}
+          onContextMenu={(e) => onContextMenu(e, feed.id, feed.url, feed.name)}
           onDragStart={() => onFeedDragStart(feed.id)}
           indented
         />
@@ -352,25 +416,20 @@ function FolderGroup({ name, feeds, selectedFeed, onSelectFeed, onContextMenu, i
   );
 }
 
-function FeedContextMenu({ feedId, feedUrl, x, y, folders, onMarkAllRead, onRemove, onOpenUrl, onMoveToFolder, onClose }: {
+function FeedContextMenu({ feedId, feedUrl, feedName, x, y, onMarkAllRead, onRemove, onOpenUrl, onRename, onClose }: {
   feedId: number;
   feedUrl: string;
+  feedName: string;
   x: number;
   y: number;
-  folders: string[];
   onMarkAllRead: () => void;
   onRemove: () => void;
   onOpenUrl: () => void;
-  onMoveToFolder: (folder: string | null) => void;
+  onRename: (name: string) => void;
   onClose: () => void;
 }) {
-  const [view, setView] = useState<'main' | 'folder'>('main');
-  const [newFolderName, setNewFolderName] = useState('');
-
-  const handleNewFolder = () => {
-    const name = newFolderName.trim();
-    if (name) onMoveToFolder(name);
-  };
+  const [view, setView] = useState<'main' | 'rename'>('main');
+  const [renameValue, setRenameValue] = useState(feedName);
 
   // Keep menu on-screen: clamp left so it doesn't overflow the right edge
   const menuWidth = 200;
@@ -383,49 +442,89 @@ function FeedContextMenu({ feedId, feedUrl, x, y, folders, onMarkAllRead, onRemo
         {view === 'main' ? (
           <>
             <button style={styles.contextItem} onClick={onMarkAllRead}>Mark all as read</button>
+            <button style={styles.contextItem} onClick={() => setView('rename')}>Rename</button>
             <button style={styles.contextItem} onClick={onOpenUrl}>Open feed URL</button>
-            <button style={styles.contextItem} onClick={() => setView('folder')}>
-              <span style={{ flex: 1, textAlign: 'left' }}>Move to folder</span>
-              <span style={{ color: 'var(--text-tertiary)' }}>›</span>
-            </button>
             <div style={styles.contextDivider} />
             <button style={{ ...styles.contextItem, color: '#ff3b30' }} onClick={onRemove}>
               Remove feed
             </button>
           </>
         ) : (
-          <>
-            <button style={{ ...styles.contextItem, color: 'var(--text-tertiary)', fontSize: 12 }} onClick={() => setView('main')}>
-              ‹ Back
-            </button>
-            <div style={styles.contextDivider} />
-            <button style={styles.contextItem} onClick={() => onMoveToFolder(null)}>
-              No folder
-            </button>
-            {folders.map(folder => (
-              <button key={folder} style={styles.contextItem} onClick={() => onMoveToFolder(folder)}>
-                {folder}
-              </button>
-            ))}
-            <div style={styles.contextDivider} />
-            <div style={styles.contextNewFolder}>
-              <input
-                autoFocus
-                style={styles.contextFolderInput}
-                placeholder="New folder…"
-                value={newFolderName}
-                onChange={e => setNewFolderName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleNewFolder(); e.stopPropagation(); }}
-              />
+          <div style={styles.contextNewFolder}>
+            <input
+              autoFocus
+              style={styles.contextFolderInput}
+              placeholder="Feed name…"
+              value={renameValue}
+              onChange={e => setRenameValue(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && renameValue.trim()) { if (renameValue.trim() !== feedName) onRename(renameValue.trim()); else onClose(); } if (e.key === 'Escape') onClose(); e.stopPropagation(); }}
+            />
+            <div style={styles.contextButtonRow}>
               <button
-                style={{ ...styles.contextItem, color: 'var(--accent)', paddingTop: 4, paddingBottom: 4 }}
-                onClick={handleNewFolder}
-                disabled={!newFolderName.trim()}
+                style={{ ...styles.contextItem, color: 'var(--text-secondary)', paddingTop: 4, paddingBottom: 4, flex: 1, justifyContent: 'center' }}
+                onClick={onClose}
               >
-                Create
+                Cancel
+              </button>
+              <button
+                style={{ ...styles.contextItem, color: 'var(--accent)', paddingTop: 4, paddingBottom: 4, flex: 1, justifyContent: 'center' }}
+                onClick={() => { if (renameValue.trim() && renameValue.trim() !== feedName) onRename(renameValue.trim()); else onClose(); }}
+              >
+                Save
               </button>
             </div>
-          </>
+          </div>
+        )}
+      </div>
+    </>,
+    document.body
+  );
+}
+
+function FolderContextMenu({ folderName, x, y, onRename, onClose }: {
+  folderName: string;
+  x: number;
+  y: number;
+  onRename: (newName: string) => void;
+  onClose: () => void;
+}) {
+  const [view, setView] = useState<'main' | 'rename'>('main');
+  const [renameValue, setRenameValue] = useState(folderName);
+
+  const menuWidth = 200;
+  const clampedX = Math.min(x, window.innerWidth - menuWidth - 8);
+
+  return createPortal(
+    <>
+      <div style={styles.contextOverlay} onClick={onClose} />
+      <div style={{ ...styles.contextMenu, left: clampedX, top: y }} onClick={e => e.stopPropagation()}>
+        {view === 'main' ? (
+          <button style={styles.contextItem} onClick={() => setView('rename')}>Rename</button>
+        ) : (
+          <div style={styles.contextNewFolder}>
+            <input
+              autoFocus
+              style={styles.contextFolderInput}
+              placeholder="Folder name…"
+              value={renameValue}
+              onChange={e => setRenameValue(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && renameValue.trim()) { if (renameValue.trim() !== folderName) onRename(renameValue.trim()); else onClose(); } if (e.key === 'Escape') onClose(); e.stopPropagation(); }}
+            />
+            <div style={styles.contextButtonRow}>
+              <button
+                style={{ ...styles.contextItem, color: 'var(--text-secondary)', paddingTop: 4, paddingBottom: 4, flex: 1, justifyContent: 'center' }}
+                onClick={onClose}
+              >
+                Cancel
+              </button>
+              <button
+                style={{ ...styles.contextItem, color: 'var(--accent)', paddingTop: 4, paddingBottom: 4, flex: 1, justifyContent: 'center' }}
+                onClick={() => { if (renameValue.trim() && renameValue.trim() !== folderName) onRename(renameValue.trim()); else onClose(); }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </>,
@@ -610,6 +709,10 @@ const styles: Record<string, React.CSSProperties> = {
   folderName: {
     flex: 1,
   },
+  folderDropTarget: {
+    background: 'var(--accent-subtle)',
+    borderRadius: 5,
+  },
   empty: {
     flex: 1,
     display: 'flex',
@@ -701,6 +804,10 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '4px 8px 6px',
     display: 'flex',
     flexDirection: 'column',
+    gap: 4,
+  },
+  contextButtonRow: {
+    display: 'flex',
     gap: 4,
   },
   contextFolderInput: {

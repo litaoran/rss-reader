@@ -8,6 +8,9 @@ interface RssApi {
     remove: (id: number) => Promise<void>;
     updateFolder: (id: number, folder: string | null) => Promise<void>;
     markAllRead: (id: number) => Promise<void>;
+    rename: (id: number, name: string) => Promise<void>;
+    renameFolder: (oldName: string, newName: string) => Promise<void>;
+    reorderFolders: (folders: string[]) => Promise<void>;
   };
   articles: {
     list: (feedId: number | null, options: {

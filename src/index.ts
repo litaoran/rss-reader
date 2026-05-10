@@ -4,8 +4,8 @@ import {
   initDb, listFeeds, addFeed, removeFeed, markFeedAllRead, updateFeedLastFetched,
   listArticles, getArticle, markArticleRead, toggleArticleStar,
   updateScrollProgress, updateArticleContent, updateArticlePublishedAt,
-  searchArticles, upsertArticles, renameFeedFolder, updateFeedFolder, cleanupBadArticles,
-  updateFeedFavicon,
+  searchArticles, upsertArticles, renameFeed, renameFeedFolder, updateFeedFolder, cleanupBadArticles,
+  updateFeedFavicon, reorderFolders,
 } from './db';
 import { fetchFeed, discoverFeedUrl, fetchFaviconUrl } from './fetcher';
 import { scrapeWithBrowser } from './scrapers/browser';
@@ -116,6 +116,21 @@ ipcMain.handle('feeds:add', async (_, url: string, name: string, folder: string 
 
 ipcMain.handle('feeds:updateFolder', (_, id: number, folder: string | null) => {
   updateFeedFolder(id, folder);
+  mainWindow?.webContents.send('feeds:updated', listFeeds());
+});
+
+ipcMain.handle('feeds:reorderFolders', (_, folders: string[]) => {
+  reorderFolders(folders);
+  mainWindow?.webContents.send('feeds:updated', listFeeds());
+});
+
+ipcMain.handle('feeds:rename', (_, id: number, name: string) => {
+  renameFeed(id, name);
+  mainWindow?.webContents.send('feeds:updated', listFeeds());
+});
+
+ipcMain.handle('feeds:renameFolder', (_, oldName: string, newName: string) => {
+  renameFeedFolder(oldName, newName);
   mainWindow?.webContents.send('feeds:updated', listFeeds());
 });
 

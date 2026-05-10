@@ -75,6 +75,13 @@ function migrate(db: Database.Database) {
   } catch {
     // Column already exists
   }
+
+  // Add folderOrder column for custom folder ordering
+  try {
+    db.exec('ALTER TABLE feeds ADD COLUMN folderOrder INTEGER NOT NULL DEFAULT 0');
+  } catch {
+    // Column already exists
+  }
 }
 
 export function listFeeds(): Feed[] {
@@ -86,7 +93,7 @@ export function listFeeds(): Feed[] {
     LEFT JOIN articles a ON a.feedId = f.id
     WHERE f.isActive = 1
     GROUP BY f.id
-    ORDER BY f.folder NULLS LAST, f.name
+    ORDER BY CASE WHEN f.folder IS NULL THEN 1 ELSE 0 END, f.folderOrder, f.folder, f.name
   `).all(Date.now() - 7 * 24 * 60 * 60 * 1000) as any[];
 
   return rows.map(r => ({
@@ -251,8 +258,21 @@ export function upsertArticles(
   return inserted;
 }
 
+export function renameFeed(id: number, name: string): void {
+  getDb().prepare('UPDATE feeds SET name = ? WHERE id = ?').run(name, id);
+}
+
 export function renameFeedFolder(oldFolder: string, newFolder: string): void {
   getDb().prepare('UPDATE feeds SET folder = ? WHERE folder = ?').run(newFolder, oldFolder);
+}
+
+/** Set the display order for folders. `folders` is an ordered array of folder names. */
+export function reorderFolders(folders: string[]): void {
+  const stmt = getDb().prepare('UPDATE feeds SET folderOrder = ? WHERE folder = ?');
+  const update = getDb().transaction((items: string[]) => {
+    items.forEach((folder, i) => stmt.run(i, folder));
+  });
+  update(folders);
 }
 
 /**
