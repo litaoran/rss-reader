@@ -732,7 +732,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
     padding: '8px 12px',
     fontSize: 10,
-    color: 'var(--text-muted)',
+    color: 'var(--text-tertiary)',
     borderTop: '1px solid var(--border)',
   },
   updateBanner: {
