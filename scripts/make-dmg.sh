@@ -2,6 +2,8 @@
 # Create a macOS DMG installer from the packaged Antenna.app
 # Usage: ./scripts/make-dmg.sh [arch]
 # arch defaults to arm64
+#
+# Requires: brew install create-dmg
 
 set -euo pipefail
 
@@ -10,8 +12,7 @@ VERSION=$(node -p "require('./package.json').version")
 APP_PATH="out/Antenna-darwin-${ARCH}/Antenna.app"
 DMG_NAME="Antenna-${VERSION}-${ARCH}.dmg"
 DMG_PATH="out/make/${DMG_NAME}"
-VOLUME_NAME="Antenna"
-STAGING_DIR=$(mktemp -d)
+BG_IMAGE="assets/dmg/background.png"
 
 if [ ! -d "$APP_PATH" ]; then
   echo "Error: $APP_PATH not found. Run 'npm run make' first."
@@ -19,23 +20,21 @@ if [ ! -d "$APP_PATH" ]; then
 fi
 
 echo "Creating DMG: ${DMG_NAME}"
-
-# Set up staging directory with app and Applications symlink
-cp -R "$APP_PATH" "${STAGING_DIR}/Antenna.app"
-ln -s /Applications "${STAGING_DIR}/Applications"
-
-# Create DMG
 mkdir -p "$(dirname "$DMG_PATH")"
 rm -f "$DMG_PATH"
-hdiutil create \
-  -volname "$VOLUME_NAME" \
-  -srcfolder "$STAGING_DIR" \
-  -ov \
-  -format UDZO \
-  "$DMG_PATH"
 
-# Clean up
-rm -rf "$STAGING_DIR"
+create-dmg \
+  --volname "Antenna" \
+  --background "$BG_IMAGE" \
+  --window-pos 200 120 \
+  --window-size 660 400 \
+  --icon-size 80 \
+  --icon "Antenna.app" 180 170 \
+  --app-drop-link 480 170 \
+  --hide-extension "Antenna.app" \
+  --no-internet-enable \
+  "$DMG_PATH" \
+  "$APP_PATH"
 
 echo "Done: ${DMG_PATH}"
 ls -lh "$DMG_PATH"
