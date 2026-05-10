@@ -24,13 +24,13 @@ mkdir -p "$(dirname "$DMG_PATH")"
 rm -f "$DMG_PATH"
 
 create-dmg \
-  --volname "Antenna" \
+  --volname "Antenna Installer" \
   --background "$BG_IMAGE" \
   --window-pos 200 120 \
   --window-size 660 400 \
-  --icon-size 80 \
-  --icon "Antenna.app" 180 170 \
-  --app-drop-link 480 170 \
+  --icon-size 128 \
+  --icon "Antenna.app" 170 170 \
+  --app-drop-link 490 170 \
   --hide-extension "Antenna.app" \
   --no-internet-enable \
   "$DMG_PATH" \
