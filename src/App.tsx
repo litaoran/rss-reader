@@ -41,7 +41,7 @@ export function App() {
   const [selectedFeed, setSelectedFeed] = useState<SelectedFeed>('all');
   const [articles, setArticles] = useState<Article[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<ArticleWithContent | null>(null);
-  const [unreadOnly, setUnreadOnly] = useState(true);
+  const [unreadOnly, setUnreadOnly] = useState(false);
   const unreadPrefs = useRef<Record<string, boolean>>({});
   const [refreshProgress, setRefreshProgress] = useState<RefreshProgress>({ isRefreshing: false });
   const [newArticleNotice, setNewArticleNotice] = useState<{ count: number } | null>(null);
@@ -125,8 +125,8 @@ export function App() {
   const handleSelectFeed = useCallback((feed: SelectedFeed) => {
     // Save current feed's unread pref before switching
     unreadPrefs.current[String(selectedFeed)] = unreadOnly;
-    // Restore the target feed's pref (default: true)
-    const restored = unreadPrefs.current[String(feed)] ?? true;
+    // Restore the target feed's pref (default: show all)
+    const restored = unreadPrefs.current[String(feed)] ?? false;
     setUnreadOnly(restored);
     setSelectedFeed(feed);
     loadArticles(feed, restored);
