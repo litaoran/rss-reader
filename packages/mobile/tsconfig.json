@@ -1,0 +1,12 @@
+{
+  "extends": "@react-native/typescript-config",
+  "compilerOptions": {
+    "types": ["jest"],
+    "paths": {
+      "@antenna/shared": ["../shared/src"]
+    },
+    "baseUrl": "."
+  },
+  "include": ["**/*.ts", "**/*.tsx", "../shared/src/**/*.ts"],
+  "exclude": ["**/node_modules", "**/Pods"]
+}
