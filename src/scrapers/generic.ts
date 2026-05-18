@@ -131,10 +131,23 @@ const EXTRACT_LIST_JS = `
 
   // ---- Strategy 2: <article> tags ----
   for (const article of document.querySelectorAll('article')) {
-    const link = article.querySelector('a[href]');
+    // Link can be a child (article > a) or parent (a > article)
+    let link = article.querySelector('a[href]');
+    if (!link) {
+      const parentLink = article.closest('a[href]');
+      if (parentLink) link = parentLink;
+    }
     if (!link) continue;
+    // Title: heading > first substantial <p> > link text
     const heading = article.querySelector('h1, h2, h3, h4');
-    const title = heading?.textContent || link.textContent;
+    let title = heading?.textContent;
+    if (!title) {
+      for (const p of article.querySelectorAll('p')) {
+        const t = p.textContent?.trim();
+        if (t && t.length >= 10 && t.length < 300) { title = t; break; }
+      }
+    }
+    if (!title) title = link.textContent?.trim().split('\\n')[0];
     addResult(title, link.href, extractDate(article), extractAuthor(article), extractSummary(article));
   }
   if (results.length >= 3) return { articles: results, siteName: document.querySelector('meta[property="og:site_name"]')?.content || document.title };
