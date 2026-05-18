@@ -70,24 +70,23 @@ export function App() {
 
     const onSeedProgress = (p: { name: string; done: number; total: number }) => {
       setSeedProgress(p);
-      if (p.done + 1 >= p.total) setTimeout(() => setSeedProgress(null), 1000);
-    };
-    const onFeedsUpdatedAfterSeed = (updated: Feed[]) => {
-      setFeeds(updated);
-      loadArticles('all', true);
+      if (p.done + 1 >= p.total) {
+        setTimeout(() => setSeedProgress(null), 1000);
+        // Reload feeds and articles once seeding is complete
+        window.rss.feeds.list().then(setFeeds);
+        loadArticles('all', true);
+      }
     };
 
     const onUpdateReady = () => setUpdateReady(true);
 
     window.rss.on('feeds:updated', onFeedsUpdated);
-    window.rss.on('feeds:updated', onFeedsUpdatedAfterSeed);
     window.rss.on('refresh:progress', onRefreshProgress);
     window.rss.on('articles:new', onArticlesNew);
     window.rss.on('seed:progress', onSeedProgress);
     window.rss.on('update:ready', onUpdateReady);
     return () => {
       window.rss.off('feeds:updated', onFeedsUpdated);
-      window.rss.off('feeds:updated', onFeedsUpdatedAfterSeed);
       window.rss.off('refresh:progress', onRefreshProgress);
       window.rss.off('articles:new', onArticlesNew);
       window.rss.off('seed:progress', onSeedProgress);
