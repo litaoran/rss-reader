@@ -78,6 +78,21 @@ export async function discoverFeedUrl(rawUrl: string): Promise<string> {
     if (resolved !== url && findAdapter(resolved)) return resolved;
   } catch {}
 
+  // If the URL points to a specific category/section page (3+ path segments
+  // like /news/engineering/), try the generic scraper first. RSS feeds found
+  // via <link> tags often cover a broader section than what the user asked for
+  // (e.g. /news/rss.xml covers all news, not just engineering).
+  const inputSegments = new URL(url).pathname.replace(/\/$/, '').split('/').filter(Boolean);
+  if (inputSegments.length >= 2) {
+    try {
+      const result = await genericScraper.scrape(url);
+      if (result.articles.length >= 2) {
+        registerGenericUrl(url);
+        return url;
+      }
+    } catch {}
+  }
+
   // Try the URL directly first
   try {
     await parser.parseURL(url);
@@ -162,13 +177,16 @@ export async function discoverFeedUrl(rawUrl: string): Promise<string> {
   }
 
   // Last resort: try the generic web scraper for sites without RSS
-  try {
-    const result = await genericScraper.scrape(url);
-    if (result.articles.length >= 1) {
-      registerGenericUrl(url);
-      return url;  // Return the original URL — fetchFeed will route through generic adapter
-    }
-  } catch {}
+  // (only for root/shallow URLs that weren't tried above)
+  if (inputSegments.length < 2) {
+    try {
+      const result = await genericScraper.scrape(url);
+      if (result.articles.length >= 1) {
+        registerGenericUrl(url);
+        return url;
+      }
+    } catch {}
+  }
 
   throw new Error(`Could not find RSS feed for: ${url}`);
 }

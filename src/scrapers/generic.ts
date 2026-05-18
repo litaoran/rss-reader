@@ -181,6 +181,52 @@ const EXTRACT_LIST_JS = `
   }
   if (results.length >= 2) return { articles: results, siteName: document.querySelector('meta[property="og:site_name"]')?.content || document.title };
 
+  // ---- Strategy 3b: Link cards with <time> elements ----
+  // Many modern sites (e.g. OpenAI) use div-based card layouts without
+  // headings or <article> tags.  A strong article signal is a link that
+  // contains (or whose parent contains) a <time> element.
+  document.querySelectorAll('a[href]').forEach(a => {
+    // Look for a <time> inside the link or in its immediate parent card
+    let card = a;
+    let time = a.querySelector('time');
+    if (!time) {
+      // Walk up a couple levels to find a card wrapper with a <time>
+      for (let p = a.parentElement, i = 0; p && i < 3; p = p.parentElement, i++) {
+        time = p.querySelector('time');
+        if (time) { card = p; break; }
+      }
+    }
+    if (!time) return;
+
+    // The link must point to something that looks like an article path
+    // (more than just "/" or a short path like "/news/")
+    try {
+      const u = new URL(a.href);
+      const segments = u.pathname.replace(/\\/$/, '').split('/').filter(Boolean);
+      if (segments.length < 2) return;  // Too short — likely a category page
+    } catch { return; }
+
+    // Extract the best title text — first substantial div/span text in the link
+    let title = '';
+    if (a.querySelector('h1, h2, h3, h4, h5')) {
+      title = a.querySelector('h1, h2, h3, h4, h5').textContent;
+    } else {
+      // Find the first text-heavy child (skip category labels and dates)
+      for (const child of a.querySelectorAll('div, span, p')) {
+        const t = child.textContent?.trim();
+        if (t && t.length >= 15 && t.length < 300 && !child.querySelector('time')) {
+          title = t;
+          break;
+        }
+      }
+    }
+    if (!title) title = a.textContent?.trim().split('\\n')[0];
+
+    const dateStr = time.getAttribute('datetime') || time.textContent;
+    addResult(title, a.href, dateStr, extractAuthor(card), extractSummary(card));
+  });
+  if (results.length >= 2) return { articles: results, siteName: document.querySelector('meta[property="og:site_name"]')?.content || document.title };
+
   // ---- Strategy 4: OG meta single-article fallback ----
   const ogTitle = document.querySelector('meta[property="og:title"]')?.content;
   const ogUrl = document.querySelector('meta[property="og:url"]')?.content;
