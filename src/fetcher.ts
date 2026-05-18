@@ -65,33 +65,52 @@ export async function fetchFeed(url: string): Promise<ParsedFeed> {
   };
 }
 
+function parseWithTimeout(url: string, timeoutMs = 5000): ReturnType<typeof parser.parseURL> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('parse timeout')), timeoutMs);
+    parser.parseURL(url).then(
+      (result) => { clearTimeout(timer); resolve(result); },
+      (err) => { clearTimeout(timer); reject(err); },
+    );
+  });
+}
+
 export async function discoverFeedUrl(rawUrl: string): Promise<string> {
   const url = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
 
-  // Check scraper adapters first — these handle sites with no RSS feed
   if (findAdapter(url)) return url;
 
-  // Follow redirects and re-check adapters — e.g. doordash.engineering
-  // redirects to careersatdoordash.com/career-areas/engineering/
   try {
     const resolved = await resolveRedirect(url);
     if (resolved !== url && findAdapter(resolved)) return resolved;
   } catch {}
 
-  // Try the URL directly first
   try {
-    await parser.parseURL(url);
+    await parseWithTimeout(url);
     return url;
   } catch {}
 
-  // Parse the HTML page for feed declarations — two passes:
-  // 1. <link rel="alternate" type="application/rss+xml"> — the standard
-  // 2. Any href containing /feed, /rss, /atom as a fallback for sites
-  //    (like Cloudflare's blog) that omit the <link> tag but have a /rss/ path
+  // The URL isn't a feed itself. Race RSS candidate probing against the
+  // generic web scraper — for sites without RSS (e.g. anthropic.com) the
+  // scraper returns in ~6s instead of waiting ~2min for 20+ candidates.
+  const rssProbe = probeRssCandidates(url);
+  const scraperProbe = probeWithScraper(url);
+  try {
+    return await new Promise<string>((resolve, reject) => {
+      let failures = 0;
+      const fail = () => { if (++failures === 2) reject(new Error('both probes failed')); };
+      rssProbe.then(resolve, fail);
+      scraperProbe.then(resolve, fail);
+    });
+  } catch {
+    throw new Error(`Could not find RSS feed for: ${url}`);
+  }
+}
+
+async function probeRssCandidates(url: string): Promise<string> {
   try {
     const html = await fetchHtml(url);
 
-    // Pass 1: proper <link rel="alternate"> tags
     const linkRe = /<link[^>]+rel=["']alternate["'][^>]*>/gi;
     const hrefRe = /href=["']([^"']+)["']/i;
     const typeRe = /type=["'](application\/(rss|atom)\+xml)[^"']*["']/i;
@@ -103,12 +122,11 @@ export async function discoverFeedUrl(rawUrl: string): Promise<string> {
       if (!hrefMatch) continue;
       const feedUrl = new URL(hrefMatch[1], url).href;
       try {
-        await parser.parseURL(feedUrl);
+        await parseWithTimeout(feedUrl);
         return feedUrl;
       } catch {}
     }
 
-    // Pass 2: any anchor/link href that looks like a feed path
     const allHrefRe = /href=["']([^"']*(?:\/feed|\/rss|\/atom)[^"']*?)["']/gi;
     const feedHrefs = new Set<string>();
     while ((match = allHrefRe.exec(html)) !== null) {
@@ -116,17 +134,15 @@ export async function discoverFeedUrl(rawUrl: string): Promise<string> {
     }
     for (const feedUrl of feedHrefs) {
       try {
-        await parser.parseURL(feedUrl);
+        await parseWithTimeout(feedUrl);
         return feedUrl;
       } catch {}
     }
   } catch {}
 
-  // Common feed paths to try — root-level and blog-subdirectory variants
   const base = new URL(url).origin;
-  const path = new URL(url).pathname.replace(/\/$/, ''); // e.g. "/blog"
+  const path = new URL(url).pathname.replace(/\/$/, '');
   const candidates = [
-    // Root-level
     `${base}/feed`,
     `${base}/feed.xml`,
     `${base}/feed.atom`,
@@ -135,12 +151,10 @@ export async function discoverFeedUrl(rawUrl: string): Promise<string> {
     `${base}/rss/`,
     `${base}/atom.xml`,
     `${base}/index.xml`,
-    // Pelican / Jekyll style under /feeds/
     `${base}/feeds/rss.xml`,
     `${base}/feeds/atom.xml`,
     `${base}/feeds/all.rss.xml`,
     `${base}/feeds/all.atom.xml`,
-    // Path-relative (e.g. https://go.dev/blog → tries /blog/feed.atom)
     ...(path ? [
       `${base}${path}/feed`,
       `${base}${path}/feed.xml`,
@@ -150,27 +164,26 @@ export async function discoverFeedUrl(rawUrl: string): Promise<string> {
       `${base}${path}/atom.xml`,
       `${base}${path}/index.xml`,
     ] : []),
-    // Blogger / legacy
     `${base}/feeds/posts/default`,
   ];
 
   for (const candidate of candidates) {
     try {
-      await parser.parseURL(candidate);
+      await parseWithTimeout(candidate);
       return candidate;
     } catch {}
   }
 
-  // Last resort: try the generic web scraper for sites without RSS
-  try {
-    const result = await genericScraper.scrape(url);
-    if (result.articles.length >= 1) {
-      registerGenericUrl(url);
-      return url;  // Return the original URL — fetchFeed will route through generic adapter
-    }
-  } catch {}
+  throw new Error('No RSS candidates matched');
+}
 
-  throw new Error(`Could not find RSS feed for: ${url}`);
+async function probeWithScraper(url: string): Promise<string> {
+  const result = await genericScraper.scrape(url);
+  if (result.articles.length >= 1) {
+    registerGenericUrl(url);
+    return url;
+  }
+  throw new Error('Scraper found no articles');
 }
 
 /** Follow up to 5 redirects and return the final URL. */
