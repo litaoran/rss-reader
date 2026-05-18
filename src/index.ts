@@ -5,11 +5,13 @@ import {
   listArticles, getArticle, markArticleRead, toggleArticleStar,
   updateScrollProgress, updateArticleContent, updateArticlePublishedAt,
   searchArticles, upsertArticles, renameFeed, renameFeedFolder, updateFeedFolder, cleanupBadArticles,
-  updateFeedFavicon, reorderFolders,
+  updateFeedFavicon, reorderFolders, markFeedAsScraped, getScrapedFeedUrls,
 } from './db';
 import { fetchFeed, discoverFeedUrl, fetchFaviconUrl } from './fetcher';
 import { scrapeWithBrowser } from './scrapers/browser';
 import { EXTRACT_ARTICLE_CONTENT_JS, EXTRACT_DATE_JS } from './scrapers/uber';
+import { registerGenericUrl } from './scrapers/index';
+import { isGenericUrl } from './scrapers/generic';
 import { seedDefaultFeeds } from './seeds';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
@@ -94,6 +96,8 @@ ipcMain.handle('feeds:discover', async (_, url: string) => {
 
 ipcMain.handle('feeds:add', async (_, url: string, name: string, folder: string | null) => {
   const feed = addFeed(url, name, folder);
+  // Mark scraped feeds so the generic adapter is used on future refreshes
+  if (isGenericUrl(url)) markFeedAsScraped(feed.id);
   try {
     const cached = discoveryCache.get(url);
     const parsed = (cached && cached.expiresAt > Date.now())
@@ -235,6 +239,8 @@ app.on('ready', async () => {
   renameFeedFolder('Individual Engineers', 'Writers');
   // Remove articles inserted by earlier buggy scrapers
   cleanupBadArticles();
+  // Re-register scraped feed URLs so the generic adapter recognises them
+  for (const url of getScrapedFeedUrls()) registerGenericUrl(url);
   createWindow();
   await seedDefaultFeeds((name, done, total) => {
     mainWindow?.webContents.send('seed:progress', { name, done, total });

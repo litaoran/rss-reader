@@ -82,6 +82,13 @@ function migrate(db: Database.Database) {
   } catch {
     // Column already exists
   }
+
+  // Track feeds that use the web scraper instead of RSS
+  try {
+    db.exec('ALTER TABLE feeds ADD COLUMN isScraped INTEGER NOT NULL DEFAULT 0');
+  } catch {
+    // Column already exists
+  }
 }
 
 export function listFeeds(): Feed[] {
@@ -110,6 +117,16 @@ export function listFeeds(): Feed[] {
 
 export function updateFeedFavicon(id: number, faviconUrl: string) {
   getDb().prepare('UPDATE feeds SET faviconUrl = ? WHERE id = ?').run(faviconUrl, id);
+}
+
+export function markFeedAsScraped(id: number) {
+  getDb().prepare('UPDATE feeds SET isScraped = 1 WHERE id = ?').run(id);
+}
+
+/** Returns URLs of all active feeds that use the web scraper. */
+export function getScrapedFeedUrls(): string[] {
+  return (getDb().prepare('SELECT url FROM feeds WHERE isActive = 1 AND isScraped = 1').all() as { url: string }[])
+    .map(r => r.url);
 }
 
 export function addFeed(url: string, name: string, folder: string | null): Feed {

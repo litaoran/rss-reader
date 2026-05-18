@@ -1,6 +1,7 @@
 import Parser from 'rss-parser';
 import https from 'https';
-import { findAdapter } from './scrapers/index';
+import { findAdapter, registerGenericUrl } from './scrapers/index';
+import { genericScraper } from './scrapers/generic';
 
 // Some feeds (e.g. Netflix Tech Blog) use intermediate CAs not in Node's
 // default bundle. For an RSS reader fetching public content this is fine.
@@ -159,6 +160,15 @@ export async function discoverFeedUrl(rawUrl: string): Promise<string> {
       return candidate;
     } catch {}
   }
+
+  // Last resort: try the generic web scraper for sites without RSS
+  try {
+    const result = await genericScraper.scrape(url);
+    if (result.articles.length >= 1) {
+      registerGenericUrl(url);
+      return url;  // Return the original URL — fetchFeed will route through generic adapter
+    }
+  } catch {}
 
   throw new Error(`Could not find RSS feed for: ${url}`);
 }
