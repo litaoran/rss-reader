@@ -17,17 +17,21 @@ const config: ForgeConfig = {
     icon: path.resolve(__dirname, 'assets', 'icon'),
     name: 'Antenna',
     appBundleId: 'com.taoranli.antenna',
-    osxSign: {
-      identity: process.env.APPLE_SIGNING_IDENTITY,
-      optionsForFile: () => ({
-        hardenedRuntime: true,
-        entitlements: path.resolve(__dirname, 'entitlements.plist'),
-        'entitlements-inherit': path.resolve(__dirname, 'entitlements.inherit.plist'),
-      }),
-    },
-    osxNotarize: {
-      keychainProfile: process.env.APPLE_NOTARIZE_PROFILE,
-    },
+    ...(process.env.APPLE_SIGNING_IDENTITY ? {
+      osxSign: {
+        identity: process.env.APPLE_SIGNING_IDENTITY,
+        optionsForFile: () => ({
+          hardenedRuntime: true,
+          entitlements: path.resolve(__dirname, 'entitlements.plist'),
+          'entitlements-inherit': path.resolve(__dirname, 'entitlements.inherit.plist'),
+        }),
+      },
+    } : {}),
+    ...(process.env.APPLE_NOTARIZE_PROFILE ? {
+      osxNotarize: {
+        keychainProfile: process.env.APPLE_NOTARIZE_PROFILE,
+      },
+    } : {}),
   },
   rebuildConfig: {
     arch: 'arm64',
