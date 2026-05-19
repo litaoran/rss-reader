@@ -9,7 +9,40 @@ permissions:
   contents: write
 
 jobs:
+  # Create the GitHub Release first so both build jobs can upload to it
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
+          if [ -n "$PREV_TAG" ]; then
+            NOTES=$(git log "${PREV_TAG}..HEAD" --oneline --no-merges | grep -v "Bump version" | sed 's/^[a-f0-9]* /- /')
+          else
+            NOTES="Initial release"
+          fi
+          echo "notes<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$NOTES" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --notes "${{ steps.notes.outputs.notes }}" \
+            --draft=false
+
   build:
+    needs: create-release
     strategy:
       matrix:
         include:
