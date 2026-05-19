@@ -13,6 +13,7 @@ import { EXTRACT_ARTICLE_CONTENT_JS, EXTRACT_DATE_JS } from './scrapers/uber';
 import { registerGenericUrl } from './scrapers/index';
 import { isGenericUrl } from './scrapers/generic';
 import { seedDefaultFeeds } from './seeds';
+import { isPartialContent } from './contentUtils';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
@@ -157,8 +158,8 @@ ipcMain.handle('articles:get', (_, id: number) => getArticle(id));
 ipcMain.handle('articles:fetchContent', async (_, id: number) => {
   const article = getArticle(id);
   if (!article) return null;
-  if (article.content) {
-    // Content already stored — still try to backfill date if missing
+  if (article.content && !isPartialContent(article.content)) {
+    // Content already stored and looks complete — still try to backfill date if missing
     if (!article.publishedAt) {
       try {
         const ts = await scrapeWithBrowser<number | null>(article.url, EXTRACT_DATE_JS, { waitMs: 2500 });
@@ -174,12 +175,14 @@ ipcMain.handle('articles:fetchContent', async (_, id: number) => {
       scrapeWithBrowser<string>(article.url, EXTRACT_ARTICLE_CONTENT_JS, { waitMs: 2500 }),
       scrapeWithBrowser<number | null>(article.url, EXTRACT_DATE_JS, { waitMs: 2500 }),
     ]);
-    if (html) updateArticleContent(id, html);
+    // Only replace stored content if the scrape produced something longer
+    // than what we already had (avoids overwriting a real body with a 404).
+    if (html && html.length > article.content.length) updateArticleContent(id, html);
     if (ts && !isNaN(ts)) updateArticlePublishedAt(id, ts);
-    return html;
+    return html || article.content || null;
   } catch (e) {
     console.error(`Failed to fetch content for article ${id}:`, e);
-    return null;
+    return article.content || null;
   }
 });
 

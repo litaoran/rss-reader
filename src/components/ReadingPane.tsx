@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { ArticleWithContent } from '../types';
+import { isPartialContent } from '../contentUtils';
 
 interface Props {
   article: ArticleWithContent | null;
@@ -15,12 +16,18 @@ export function ReadingPane({ article, onToggleStar, onOpenExternal, onProgress 
   const [fetchedContent, setFetchedContent] = useState<string | null>(null);
   const [isFetchingContent, setIsFetchingContent] = useState(false);
 
-  // When an article with no content is opened, fetch it on demand
+  // When an article with no content (or a truncated "Continue reading…" body)
+  // is opened, fetch the full article on demand. If we already have a partial
+  // body we show it immediately and replace it with the scraped version once
+  // it arrives, so the pane never goes blank.
   useEffect(() => {
     setFetchedContent(null);
-    if (!article || article.content) return;
+    if (!article) return;
+    const hasContent = !!article.content;
+    const needsFetch = !hasContent || isPartialContent(article.content);
+    if (!needsFetch) return;
 
-    setIsFetchingContent(true);
+    if (!hasContent) setIsFetchingContent(true);
     window.rss.articles.fetchContent(article.id).then((html: string | null) => {
       setFetchedContent(html || '');
       setIsFetchingContent(false);
@@ -127,7 +134,10 @@ export function ReadingPane({ article, onToggleStar, onOpenExternal, onProgress 
               isFetchingContent
                 ? '<p style="color:var(--text-tertiary)">Loading article…</p>'
                 : sanitize(
-                    article.content || fetchedContent || article.summary || '<p>No content available.</p>',
+                    // Prefer the freshly-scraped full body over a stored
+                    // partial one; fall back to stored content if the scrape
+                    // returned nothing.
+                    fetchedContent || article.content || article.summary || '<p>No content available.</p>',
                     article.url,
                   )
             }}
