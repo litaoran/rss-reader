@@ -71,6 +71,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           BRANCH="claude-fix/issue-${ISSUE_NUMBER}"
+
+          # Clean up any previous attempt
+          git push origin --delete "$BRANCH" 2>/dev/null || true
+
           git checkout -b "$BRANCH"
           git add -A
           git commit -m "Fix #${ISSUE_NUMBER}: $(echo "$ISSUE_TITLE" | head -c 60)
