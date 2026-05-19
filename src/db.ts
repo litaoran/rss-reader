@@ -89,6 +89,13 @@ function migrate(db: Database.Database) {
   } catch {
     // Column already exists
   }
+
+  // Track when each feed's favicon was last fetched so it can be refreshed periodically
+  try {
+    db.exec('ALTER TABLE feeds ADD COLUMN faviconFetchedAt INTEGER');
+  } catch {
+    // Column already exists
+  }
 }
 
 export function listFeeds(): Feed[] {
@@ -116,7 +123,16 @@ export function listFeeds(): Feed[] {
 }
 
 export function updateFeedFavicon(id: number, faviconUrl: string) {
-  getDb().prepare('UPDATE feeds SET faviconUrl = ? WHERE id = ?').run(faviconUrl, id);
+  getDb().prepare('UPDATE feeds SET faviconUrl = ?, faviconFetchedAt = ? WHERE id = ?')
+    .run(faviconUrl, Date.now(), id);
+}
+
+/** Returns ids+urls of feeds whose favicon hasn't been fetched in over `maxAgeMs`. */
+export function getFeedsWithStaleFavicons(maxAgeMs: number): { id: number; url: string }[] {
+  const cutoff = Date.now() - maxAgeMs;
+  return getDb().prepare(
+    'SELECT id, url FROM feeds WHERE isActive = 1 AND (faviconFetchedAt IS NULL OR faviconFetchedAt < ?)'
+  ).all(cutoff) as { id: number; url: string }[];
 }
 
 export function markFeedAsScraped(id: number) {

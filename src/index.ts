@@ -6,6 +6,7 @@ import {
   updateScrollProgress, updateArticleContent, updateArticlePublishedAt,
   searchArticles, upsertArticles, renameFeed, renameFeedFolder, updateFeedFolder, cleanupBadArticles,
   updateFeedFavicon, reorderFolders, markFeedAsScraped, getScrapedFeedUrls,
+  getFeedsWithStaleFavicons,
 } from './db';
 import { fetchFeed, discoverFeedUrl, fetchFaviconUrl } from './fetcher';
 import { scrapeWithBrowser } from './scrapers/browser';
@@ -34,6 +35,7 @@ autoUpdater.on('update-downloaded', () => {
 let mainWindow: BrowserWindow | null = null;
 let refreshTimer: NodeJS.Timeout | null = null;
 const REFRESH_INTERVAL_MS = 15 * 60 * 1000;
+const FAVICON_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -80,6 +82,21 @@ async function refreshAllFeeds() {
 
   mainWindow?.webContents.send('refresh:progress', { isRefreshing: false });
   mainWindow?.webContents.send('feeds:updated', listFeeds());
+
+  // Re-fetch favicons that are over a week old so they stay current when
+  // sites change their icon. Runs after article refresh so the UI updates first.
+  const staleFavicons = getFeedsWithStaleFavicons(FAVICON_MAX_AGE_MS);
+  let anyUpdated = false;
+  for (const feed of staleFavicons) {
+    try {
+      const iconUrl = await fetchFaviconUrl(feed.url);
+      if (iconUrl) {
+        updateFeedFavicon(feed.id, iconUrl);
+        anyUpdated = true;
+      }
+    } catch {}
+  }
+  if (anyUpdated) mainWindow?.webContents.send('feeds:updated', listFeeds());
 }
 
 ipcMain.handle('feeds:list', () => listFeeds());
