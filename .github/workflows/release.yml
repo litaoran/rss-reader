@@ -53,6 +53,14 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
+    env:
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -72,9 +80,6 @@ jobs:
       # Import Apple signing certificate (if secrets are configured)
       - name: Import signing certificate
         if: env.APPLE_CERTIFICATE != ''
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
           echo "$APPLE_CERTIFICATE" | base64 --decode > certificate.p12
           KEYCHAIN_PASSWORD=$(openssl rand -hex 16)
@@ -90,10 +95,6 @@ jobs:
       # Set up notarization profile (if secrets are configured)
       - name: Set up notarization
         if: env.APPLE_ID != ''
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           xcrun notarytool store-credentials "notarize-profile" \
             --apple-id "$APPLE_ID" \
@@ -102,8 +103,7 @@ jobs:
 
       - name: Build
         env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_NOTARIZE_PROFILE: ${{ secrets.APPLE_ID != '' && 'notarize-profile' || '' }}
+          APPLE_NOTARIZE_PROFILE: ${{ env.APPLE_ID != '' && 'notarize-profile' || '' }}
         run: npx electron-forge make --arch=${{ matrix.arch }} --platform=darwin
 
       - name: Upload artifact to release
