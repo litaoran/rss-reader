@@ -1,0 +1,89 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-15
+            arch: arm64
+          - os: macos-13
+            arch: x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Install without running postinstall (it hardcodes arm64)
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      # Rebuild native modules for the target architecture
+      - name: Rebuild native modules
+        run: npx electron-rebuild -f -w better-sqlite3 --arch ${{ matrix.arch }}
+
+      # Import Apple signing certificate (if secrets are configured)
+      - name: Import signing certificate
+        if: env.APPLE_CERTIFICATE != ''
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          echo "$APPLE_CERTIFICATE" | base64 --decode > certificate.p12
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 16)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security import certificate.p12 -k build.keychain \
+            -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: \
+            -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          rm certificate.p12
+
+      # Set up notarization profile (if secrets are configured)
+      - name: Set up notarization
+        if: env.APPLE_ID != ''
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcrun notarytool store-credentials "notarize-profile" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_ID_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID"
+
+      - name: Build
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_NOTARIZE_PROFILE: ${{ secrets.APPLE_ID != '' && 'notarize-profile' || '' }}
+        run: npx electron-forge make --arch=${{ matrix.arch }} --platform=darwin
+
+      - name: Upload artifact to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ZIP=$(find out/make -name "*.zip" -type f | head -1)
+          if [ -z "$ZIP" ]; then
+            echo "No zip found in out/make"
+            find out/make -type f
+            exit 1
+          fi
+          VERSION="${GITHUB_REF_NAME#v}"
+          ASSET_NAME="Antenna-darwin-${{ matrix.arch }}-${VERSION}.zip"
+          cp "$ZIP" "$ASSET_NAME"
+          gh release upload "$GITHUB_REF_NAME" "$ASSET_NAME" --clobber
