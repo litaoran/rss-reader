@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   fix:
-    if: github.event.label.name == 'claude-fix'
+    if: github.event.label.name == 'auto-fix'
     runs-on: macos-15
     timeout-minutes: 30
 
@@ -82,7 +82,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          BRANCH="claude-fix/issue-${ISSUE_NUMBER}"
+          BRANCH="auto-fix/issue-${ISSUE_NUMBER}"
 
           # Read the summary Claude wrote (fall back to generic if missing)
           SUMMARY=""
@@ -130,7 +130,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          PR_URL=$(gh pr list --head "claude-fix/issue-${ISSUE_NUMBER}" --json url -q '.[0].url')
+          PR_URL=$(gh pr list --head "auto-fix/issue-${ISSUE_NUMBER}" --json url -q '.[0].url')
           gh issue comment "$ISSUE_NUMBER" \
             --body "Claude Code has created a fix: ${PR_URL}"
 
