@@ -1,7 +1,7 @@
 {
   "name": "antenna",
   "productName": "Antenna",
-  "version": "1.2.9",
+  "version": "1.3.0",
   "description": "Your daily read, curated for engineers.",
   "main": ".webpack/main",
   "private": true,
