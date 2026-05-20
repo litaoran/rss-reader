@@ -15,10 +15,12 @@ export function ReadingPane({ article, onToggleStar, onOpenExternal, onProgress 
   const [fetchedContent, setFetchedContent] = useState<string | null>(null);
   const [isFetchingContent, setIsFetchingContent] = useState(false);
 
-  // When an article with no content is opened, fetch it on demand
+  // When an article with no/stub content is opened, fetch full text on demand.
+  // The generic scraper may store a short summary as "content" — treat anything
+  // under 200 chars as incomplete so we still fetch the real article.
   useEffect(() => {
     setFetchedContent(null);
-    if (!article || article.content) return;
+    if (!article || (article.content && article.content.length > 200)) return;
 
     setIsFetchingContent(true);
     window.rss.articles.fetchContent(article.id).then((html: string | null) => {

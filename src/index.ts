@@ -157,7 +157,10 @@ ipcMain.handle('articles:get', (_, id: number) => getArticle(id));
 ipcMain.handle('articles:fetchContent', async (_, id: number) => {
   const article = getArticle(id);
   if (!article) return null;
-  if (article.content) {
+  // Treat very short content (< 200 chars) as a stub/summary — re-fetch the
+  // full article.  The generic scraper sometimes stores category labels or
+  // excerpts as "content" which aren't the real article body.
+  if (article.content && article.content.length > 200) {
     // Content already stored — still try to backfill date if missing
     if (!article.publishedAt) {
       try {

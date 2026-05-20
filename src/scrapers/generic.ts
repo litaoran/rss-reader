@@ -279,7 +279,7 @@ export const genericScraper: ScraperAdapter = {
         url: item.url,
         author: item.author || null,
         publishedAt,
-        content: item.summary || '',
+        content: '',  // Leave empty — full content is fetched on demand when opened
         summary: item.summary ? item.summary.slice(0, 500) : null,
         readTimeMin: Math.max(1, Math.ceil(wordCount / 200)),
       };
