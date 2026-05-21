@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, session } from 'electron';
 
 export interface ScrapedArticle {
   title: string;
@@ -7,6 +7,14 @@ export interface ScrapedArticle {
   author?: string;
   summary?: string;
 }
+
+/**
+ * Persistent partition used by all scraper BrowserWindows.
+ * Cookies and login state survive across scrapes and app restarts.
+ * Users can sign in via a visible window (scraper:signIn IPC) and
+ * future hidden scrapes will reuse those cookies.
+ */
+export const SCRAPER_PARTITION = 'persist:scraper';
 
 /**
  * Load a URL in a hidden BrowserWindow, wait for it to fully render
@@ -29,6 +37,7 @@ export async function scrapeWithBrowser<T>(
         nodeIntegration: false,
         contextIsolation: true,
         javascript: true,
+        partition: SCRAPER_PARTITION,
       },
     });
 

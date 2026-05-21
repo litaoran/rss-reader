@@ -32,6 +32,9 @@ contextBridge.exposeInMainWorld('rss', {
   shell: {
     openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
   },
+  scraper: {
+    signIn: (url: string) => ipcRenderer.invoke('scraper:signIn', url),
+  },
   app: {
     relaunch: () => ipcRenderer.invoke('app:relaunch'),
     getVersion: () => ipcRenderer.invoke('app:version'),

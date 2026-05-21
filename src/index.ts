@@ -8,7 +8,7 @@ import {
   updateFeedFavicon, reorderFolders, markFeedAsScraped, getScrapedFeedUrls,
 } from './db';
 import { fetchFeed, discoverFeedUrl, fetchFaviconUrl } from './fetcher';
-import { scrapeWithBrowser } from './scrapers/browser';
+import { scrapeWithBrowser, SCRAPER_PARTITION } from './scrapers/browser';
 import { EXTRACT_ARTICLE_CONTENT_JS, EXTRACT_DATE_JS } from './scrapers/uber';
 import { registerGenericUrl } from './scrapers/index';
 import { isGenericUrl } from './scrapers/generic';
@@ -215,6 +215,26 @@ ipcMain.handle('refresh:feed', async (_, id: number) => {
 });
 
 ipcMain.handle('shell:openExternal', (_, url: string) => shell.openExternal(url));
+
+// Open a visible BrowserWindow with the scraper's persistent session so the
+// user can sign in to sites that require authentication (Twitter, etc.).
+// Cookies are saved automatically and reused by future hidden scrapes.
+ipcMain.handle('scraper:signIn', (_, url: string) => {
+  const signinWin = new BrowserWindow({
+    width: 900,
+    height: 700,
+    title: 'Sign in — Antenna',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      partition: SCRAPER_PARTITION,
+    },
+  });
+  signinWin.loadURL(url, {
+    userAgent:
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  });
+});
 
 ipcMain.handle('app:relaunch', () => {
   autoUpdater.quitAndInstall();

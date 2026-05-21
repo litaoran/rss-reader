@@ -234,6 +234,7 @@ export function FeedSidebar({ feeds, selectedFeed, onSelectFeed, onMarkAllRead, 
           onMarkAllRead={() => { onMarkAllRead(contextMenu.feedId); closeContextMenu(); }}
           onRemove={() => { onRemoveFeed(contextMenu.feedId); closeContextMenu(); }}
           onOpenUrl={() => { window.rss.shell.openExternal(contextMenu.feedUrl); closeContextMenu(); }}
+          onSignIn={() => { try { const u = new URL(contextMenu.feedUrl); (window.rss as any).scraper.signIn(u.origin); } catch {} closeContextMenu(); }}
           onRename={(name) => { window.rss.feeds.rename(contextMenu.feedId, name); closeContextMenu(); }}
           onClose={closeContextMenu}
         />
@@ -416,7 +417,7 @@ function FolderGroup({ name, feeds, selectedFeed, onSelectFeed, onContextMenu, o
   );
 }
 
-function FeedContextMenu({ feedId, feedUrl, feedName, x, y, onMarkAllRead, onRemove, onOpenUrl, onRename, onClose }: {
+function FeedContextMenu({ feedId, feedUrl, feedName, x, y, onMarkAllRead, onRemove, onOpenUrl, onSignIn, onRename, onClose }: {
   feedId: number;
   feedUrl: string;
   feedName: string;
@@ -425,6 +426,7 @@ function FeedContextMenu({ feedId, feedUrl, feedName, x, y, onMarkAllRead, onRem
   onMarkAllRead: () => void;
   onRemove: () => void;
   onOpenUrl: () => void;
+  onSignIn: () => void;
   onRename: (name: string) => void;
   onClose: () => void;
 }) {
@@ -444,6 +446,7 @@ function FeedContextMenu({ feedId, feedUrl, feedName, x, y, onMarkAllRead, onRem
             <button style={styles.contextItem} onClick={onMarkAllRead}>Mark all as read</button>
             <button style={styles.contextItem} onClick={() => setView('rename')}>Rename</button>
             <button style={styles.contextItem} onClick={onOpenUrl}>Open feed URL</button>
+            <button style={styles.contextItem} onClick={onSignIn}>Sign in to site</button>
             <div style={styles.contextDivider} />
             <button style={{ ...styles.contextItem, color: '#ff3b30' }} onClick={onRemove}>
               Remove feed
