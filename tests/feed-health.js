@@ -1,7 +1,7 @@
 /**
  * Feed Health Check — CI integration test
  *
- * Verifies that article loading works for the top 20 engineering blogs.
+ * Verifies that article loading works for 40 popular engineering blogs.
  * Catches URL changes, feed format breakage, and content extraction regressions.
  *
  * Two checks per feed:
@@ -35,12 +35,33 @@ const FEEDS = [
   { name: 'The Pragmatic Engineer', feedUrl: 'https://newsletter.pragmaticengineer.com/feed' },
   { name: 'The Go Blog',           feedUrl: 'https://go.dev/blog/feed.atom' },
   { name: "Lil'Log",               feedUrl: 'https://lilianweng.github.io/index.xml' },
-  { name: 'UX Planet',             feedUrl: 'https://uxplanet.org/feed' },
+  { name: 'GitLab Blog',            feedUrl: 'https://about.gitlab.com/atom.xml' },
   { name: 'Mozilla Hacks',         feedUrl: 'https://hacks.mozilla.org/feed/' },
   { name: 'Vercel Blog',           feedUrl: 'https://vercel.com/atom' },
   { name: 'Fly.io Blog',           feedUrl: 'https://fly.io/blog/feed.xml' },
   { name: 'Discord Blog',           feedUrl: 'https://discord.com/blog/rss.xml' },
-  { name: 'Airbnb Engineering',    feedUrl: 'https://medium.com/feed/airbnb-engineering' },
+  { name: 'Auth0 Blog',             feedUrl: 'https://auth0.com/blog/rss.xml' },
+  // ── Additional engineering blogs ──────────────────────────────────────
+  { name: 'OpenAI Blog',           feedUrl: 'https://openai.com/blog/rss.xml' },
+  { name: 'Google AI Blog',        feedUrl: 'https://blog.google/technology/ai/rss/' },
+  { name: 'HashiCorp Blog',        feedUrl: 'https://www.hashicorp.com/blog/feed.xml' },
+  { name: 'eBay Tech',             feedUrl: 'https://tech.ebayinc.com/rss/' },
+  { name: 'Twilio Blog',            feedUrl: 'https://www.twilio.com/blog/feed' },
+  { name: 'Grafana Blog',          feedUrl: 'https://grafana.com/blog/index.xml' },
+  { name: 'Tailscale Blog',        feedUrl: 'https://tailscale.com/blog/index.xml' },
+  { name: 'PlanetScale Blog',      feedUrl: 'https://planetscale.com/blog/rss.xml' },
+  { name: 'Neon Blog',             feedUrl: 'https://neon.tech/blog/rss.xml' },
+  { name: 'Deno Blog',             feedUrl: 'https://deno.com/feed' },
+  { name: 'Sentry Blog',           feedUrl: 'https://blog.sentry.io/feed.xml' },
+  { name: 'LaunchDarkly Blog',     feedUrl: 'https://launchdarkly.com/blog/feed/' },
+  { name: 'Astro Blog',            feedUrl: 'https://astro.build/rss.xml' },
+  { name: 'Next.js Blog',          feedUrl: 'https://nextjs.org/feed.xml' },
+  { name: 'Remix Blog',            feedUrl: 'https://remix.run/blog/rss.xml' },
+  { name: 'Rust Blog',             feedUrl: 'https://blog.rust-lang.org/feed.xml' },
+  { name: 'VS Code Blog',          feedUrl: 'https://code.visualstudio.com/feed.xml' },
+  { name: 'Chrome Developers',     feedUrl: 'https://developer.chrome.com/blog/feed.xml' },
+  { name: 'WebKit Blog',           feedUrl: 'https://webkit.org/feed/' },
+  { name: 'JetBrains Blog',        feedUrl: 'https://blog.jetbrains.com/feed/' },
 ];
 
 // ---------------------------------------------------------------------------
