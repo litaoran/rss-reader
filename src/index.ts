@@ -7,8 +7,8 @@ import {
   searchArticles, upsertArticles, renameFeed, renameFeedFolder, updateFeedFolder, cleanupBadArticles,
   updateFeedFavicon, reorderFolders, markFeedAsScraped, getScrapedFeedUrls,
 } from './db';
-import { fetchFeed, discoverFeedUrl, fetchFaviconUrl } from './fetcher';
-import { scrapeWithBrowser, SCRAPER_PARTITION } from './scrapers/browser';
+import { fetchFeed, discoverFeedUrl, fetchFaviconUrl, fetchArticleContentFast } from './fetcher';
+import { scrapeWithBrowser, scrapeWithBrowserMulti, SCRAPER_PARTITION } from './scrapers/browser';
 import { EXTRACT_ARTICLE_CONTENT_JS, EXTRACT_DATE_JS } from './scrapers/uber';
 import { registerGenericUrl } from './scrapers/index';
 import { isGenericUrl } from './scrapers/generic';
@@ -161,24 +161,40 @@ ipcMain.handle('articles:fetchContent', async (_, id: number) => {
   // full article.  The generic scraper sometimes stores category labels or
   // excerpts as "content" which aren't the real article body.
   if (article.content && article.content.length > 200) {
-    // Content already stored — still try to backfill date if missing
+    // Content already stored — backfill date if missing (fire-and-forget,
+    // uses fast HTTP instead of a browser window so it doesn't block)
     if (!article.publishedAt) {
-      try {
-        const ts = await scrapeWithBrowser<number | null>(article.url, EXTRACT_DATE_JS, { waitMs: 2500 });
-        if (ts && !isNaN(ts)) updateArticlePublishedAt(id, ts);
-      } catch {}
+      fetchArticleContentFast(article.url).then(result => {
+        if (result.publishedAt && !isNaN(result.publishedAt)) {
+          updateArticlePublishedAt(id, result.publishedAt);
+        }
+      }).catch(() => {});
     }
     return article.content;
   }
 
   try {
-    // Fetch content and date in parallel using the same page load
-    const [html, ts] = await Promise.all([
-      scrapeWithBrowser<string>(article.url, EXTRACT_ARTICLE_CONTENT_JS, { waitMs: 2500 }),
-      scrapeWithBrowser<number | null>(article.url, EXTRACT_DATE_JS, { waitMs: 2500 }),
-    ]);
+    // Fast path: HTTP fetch + HTML parsing (~200-500ms)
+    // Works for server-rendered pages (the majority of blog articles)
+    const fast = await fetchArticleContentFast(article.url);
+    if (fast.content.length > 200) {
+      updateArticleContent(id, fast.content);
+      if (fast.publishedAt && !isNaN(fast.publishedAt)) {
+        updateArticlePublishedAt(id, fast.publishedAt);
+      }
+      return fast.content;
+    }
+
+    // Slow path: single browser window for JS-rendered sites (~1-2s)
+    // Uses one window for both scripts instead of two, with reduced wait
+    const [html, ts] = await scrapeWithBrowserMulti<[string, number | null]>(
+      article.url,
+      [EXTRACT_ARTICLE_CONTENT_JS, EXTRACT_DATE_JS],
+      { waitMs: 800 }
+    );
     if (html) updateArticleContent(id, html);
-    if (ts && !isNaN(ts)) updateArticlePublishedAt(id, ts);
+    const date = (fast.publishedAt && !isNaN(fast.publishedAt)) ? fast.publishedAt : ts;
+    if (date && !isNaN(date)) updateArticlePublishedAt(id, date);
     return html;
   } catch (e) {
     console.error(`Failed to fetch content for article ${id}:`, e);

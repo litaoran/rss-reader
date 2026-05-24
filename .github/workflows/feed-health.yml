@@ -1,0 +1,33 @@
+name: Feed Health Check
+
+# Runs daily and on PRs to catch broken feed URLs and format changes
+on:
+  schedule:
+    - cron: '0 8 * * *'  # 8 AM UTC daily
+  pull_request:
+    paths:
+      - 'src/fetcher.ts'
+      - 'src/scrapers/**'
+      - 'src/seeds.ts'
+      - 'tests/feed-health.js'
+  workflow_dispatch:  # manual trigger
+
+jobs:
+  feed-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Only install runtime dependencies — no native modules or Electron needed
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-optional
+
+      - name: Run feed health check
+        run: npm run test:feeds

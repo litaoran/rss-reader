@@ -73,3 +73,59 @@ export async function scrapeWithBrowser<T>(
     });
   });
 }
+
+/**
+ * Load a URL once in a single hidden BrowserWindow and run multiple JS
+ * extraction scripts sequentially on the same page. Returns results as
+ * a tuple — avoids spawning separate windows for each script.
+ */
+export async function scrapeWithBrowserMulti<T extends any[]>(
+  url: string,
+  scripts: string[],
+  { waitMs = 800 }: { waitMs?: number } = {}
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const win = new BrowserWindow({
+      show: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        javascript: true,
+        partition: SCRAPER_PARTITION,
+      },
+    });
+
+    const timeout = setTimeout(() => {
+      win.destroy();
+      reject(new Error(`Scrape timed out for ${url}`));
+    }, 30_000);
+
+    win.webContents.once('did-finish-load', () => {
+      setTimeout(async () => {
+        try {
+          const results = [];
+          for (const script of scripts) {
+            results.push(await win.webContents.executeJavaScript(script));
+          }
+          resolve(results as T);
+        } catch (e) {
+          reject(e);
+        } finally {
+          clearTimeout(timeout);
+          win.destroy();
+        }
+      }, waitMs);
+    });
+
+    win.webContents.once('did-fail-load', (_, code, desc) => {
+      clearTimeout(timeout);
+      win.destroy();
+      reject(new Error(`Failed to load ${url}: ${desc} (${code})`));
+    });
+
+    win.loadURL(url, {
+      userAgent:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    });
+  });
+}

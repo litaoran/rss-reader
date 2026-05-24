@@ -327,6 +327,80 @@ function downloadAsDataUri(url: string): Promise<string | null> {
   });
 }
 
+/**
+ * Fast article content extraction via HTTP fetch + HTML parsing.
+ * Much faster than browser-based scraping (~200-500ms vs 3-5s).
+ * Works for server-rendered pages (the majority of blog articles).
+ */
+export async function fetchArticleContentFast(
+  url: string
+): Promise<{ content: string; publishedAt: number | null }> {
+  const html = await fetchHtml(url);
+  return {
+    content: extractArticleHtml(html),
+    publishedAt: extractPublishedDate(html),
+  };
+}
+
+/** Extract the main article HTML from a page using tag-based heuristics. */
+function extractArticleHtml(html: string): string {
+  // Strip script and style tags to reduce noise
+  const cleaned = html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '');
+
+  // Try <article>, then <main>
+  for (const tag of ['article', 'main']) {
+    const content = extractTagContent(cleaned, tag);
+    if (content.length > 200) return content;
+  }
+
+  return '';
+}
+
+/** Extract inner HTML between the first opening and last closing of a tag. */
+function extractTagContent(html: string, tag: string): string {
+  const open = html.indexOf(`<${tag}`);
+  if (open === -1) return '';
+  const openEnd = html.indexOf('>', open);
+  if (openEnd === -1) return '';
+  const close = html.lastIndexOf(`</${tag}>`);
+  if (close <= openEnd) return '';
+  return html.slice(openEnd + 1, close);
+}
+
+/** Extract the published date from JSON-LD, meta tags, or <time> elements. */
+function extractPublishedDate(html: string): number | null {
+  // 1. JSON-LD datePublished
+  const jsonLdRe = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = jsonLdRe.exec(html)) !== null) {
+    try {
+      const data = JSON.parse(m[1]);
+      const items = Array.isArray(data) ? data : [data];
+      for (const item of items) {
+        const d = item.datePublished || item.dateCreated;
+        if (d) { const ts = new Date(d).getTime(); if (!isNaN(ts)) return ts; }
+      }
+    } catch {}
+  }
+
+  // 2. <meta property="article:published_time"> or <meta name="date">
+  const metaRe = /<meta[^>]*>/gi;
+  while ((m = metaRe.exec(html)) !== null) {
+    const tag = m[0];
+    if (!/(?:property=["']article:published_time["']|name=["'](?:date|publish-date)["'])/i.test(tag)) continue;
+    const cm = /content=["']([^"']+)["']/i.exec(tag);
+    if (cm) { const ts = new Date(cm[1]).getTime(); if (!isNaN(ts)) return ts; }
+  }
+
+  // 3. <time datetime="...">
+  const timeMatch = /<time[^>]+datetime=["']([^"']+)["']/i.exec(html);
+  if (timeMatch) { const ts = new Date(timeMatch[1]).getTime(); if (!isNaN(ts)) return ts; }
+
+  return null;
+}
+
 function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
