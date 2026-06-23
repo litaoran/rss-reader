@@ -22,7 +22,7 @@ const http = require('http');
 
 const FEEDS = [
   { name: 'Hacker News',           feedUrl: 'https://hnrss.org/frontpage' },
-  { name: 'Netflix Tech Blog',     feedUrl: 'https://netflixtechblog.com/feed' },
+  { name: 'Docker Blog',            feedUrl: 'https://www.docker.com/blog/feed/' },
   { name: 'Cloudflare Blog',       feedUrl: 'https://blog.cloudflare.com/rss/' },
   { name: 'Stripe Engineering',    feedUrl: 'https://stripe.com/blog/feed.rss' },
   { name: 'AWS Blog',              feedUrl: 'https://aws.amazon.com/blogs/aws/feed/' },
